@@ -1,0 +1,936 @@
+{
+    "nodes": [
+        {
+            "id": "API Specification",
+            "type": "Concept",
+            "description": "A document or concept defining the structure and behavior of an API, containing multiple endpoints.",
+            "external_knowledge": "An API Specification serves as a detailed blueprint or instruction manual for an Application Programming Interface (API), outlining its exact functionality, how it should be used, and what responses to expect. Its primary purpose in IT platforms and software is to provide a clear, standardized guide for developers, making it significantly easier to understand, connect with, and integrate different software systems. By defining the API's design and expected behavior upfront, these specifications ensure that various applications can reliably and consistently \"talk\" to each other, fostering smooth integration, reducing errors, and accelerating the development of interconnected digital services."
+        },
+        {
+            "id": "API Endpoint",
+            "type": "API_Endpoint",
+            "description": "A distinct address within an API that performs a specific function or provides access to resources."
+        },
+        {
+            "id": "User Guide",
+            "type": "Concept",
+            "description": "A document providing instructions and information for users, structured into sections.",
+            "external_knowledge": "A User Guide, often called a user manual, is a crucial piece of technical documentation designed to help individuals understand and effectively use IT platforms, software, or applications. Its primary purpose is to act as a digital companion, providing clear, step-by-step instructions and explanations on how to perform various tasks, ranging from initial setup and installation to navigating features and troubleshooting common issues. By simplifying complex workflows and offering readily accessible guidance, user guides empower users to fully utilize a product, bridging the gap between them and the technology, which ultimately drives user adoption and provides essential support."
+        },
+        {
+            "id": "Documentation Section",
+            "type": "Concept",
+            "description": "A distinct part or division within a document, typically covering a specific topic.",
+            "external_knowledge": "A 'Documentation Section' within IT platforms and software refers to a comprehensive collection of organized information that thoroughly describes a software product or system. Its primary purpose is to provide clear and concise explanations about what the software does, how it was designed and built, and how it should be deployed, managed, and used by various audiences. The key benefits are to ensure clarity and provide essential guidance for everyone involved: software developers use it to understand design and development processes, IT staff rely on it for deployment and support, and end-users depend on it to learn how to operate the software effectively, ultimately ensuring the system is understood and utilized correctly."
+        },
+        {
+            "id": "Section",
+            "type": "Concept",
+            "description": "A distinct part or division within a document.",
+            "external_knowledge": "Based on the provided search results, the term \"Section\" as a concept within IT platforms and software is not defined or explained. The text discusses architectural context diagrams, computer components, and various types of software, but it does not describe \"Section\" as a specific element or principle in software design or platform structure. Therefore, it's not possible to provide a summary of its definition, purpose, or benefits solely from the given information."
+        },
+        {
+            "id": "Collection of API Endpoints",
+            "type": "Concept",
+            "description": "A comprehensive set of 1328 API endpoints.",
+            "external_knowledge": "A 'Collection of API Endpoints' refers to the entire set of specific digital locations or URLs where an Application Programming Interface (API) can be accessed to perform various actions or retrieve specific information. Each endpoint acts as a distinct point for interacting with a system, allowing different software applications to send requests for particular data (like a user's profile) or to trigger specific processes (like updating a record). In the context of IT platforms and software, the primary purpose of such a collection is to provide a clear, organized, and standardized interface that enables seamless communication and data exchange between diverse software components. This structured approach serves as a comprehensive \"blueprint,\" making it easy for developers to understand what an API can do and how to interact with it, thereby facilitating efficient integration, rapid development, and robust connectivity across different systems."
+        },
+        {
+            "id": "Collection of User Guide Sections",
+            "type": "Concept",
+            "description": "A structured set of 486 sections within the user documentation.",
+            "external_knowledge": "A \"Collection of User Guide Sections\" refers to a comprehensive and structured document, much like an instruction manual, specifically designed for IT platforms and software. It is broken down into various parts (sections) to clearly explain a product's features, functionalities, and proper usage. The primary purpose of this collection is to guide users, even non-experts, through the onboarding process and ongoing use of the software by providing step-by-step instructions and explanations. The main benefits are enabling users to understand and utilize the platform effectively and independently, reducing the need for direct support by offering readily available answers to common questions, and ultimately ensuring users can maximize their experience with the product."
+        },
+        {
+            "id": "API Endpoints",
+            "type": "Concept",
+            "description": "Individual callable functionalities exposed by the API, totaling 1328.",
+            "external_knowledge": "An API endpoint is essentially a specific URL or address on an API server, much like a phone number, that allows different software applications (API clients) to connect and request a particular resource or piece of data. Its primary purpose is to provide a clear and defined entry point for communication, enabling seamless data exchange and interaction between various IT platforms and software. By clearly defining where and how software can access specific functionalities or information, API endpoints streamline integration, making it easier for diverse systems to work together and share capabilities in a structured and efficient manner."
+        },
+        {
+            "id": "User Guide Sections",
+            "type": "Concept",
+            "description": "Individual parts or topics within the User Guide, totaling 486.",
+            "external_knowledge": "In the context of IT platforms and software, a 'User Guide' (which can be thought of as comprising various 'sections' or formats like step-by-step instructions, FAQs, or video tutorials) is a comprehensive resource designed to help users understand and effectively utilize a product. Its primary purpose is to provide clear explanations and instructions, guiding users through features, functionalities, and tasks from onboarding to advanced use. The main benefits are empowering users to become self-sufficient, troubleshoot issues independently, reduce errors, and maximize their overall software experience, ultimately bridging the gap between technology and the user to foster productivity and ongoing learning."
+        },
+        {
+            "id": "User Guide Section",
+            "type": "Concept",
+            "description": "A distinct part or topic within the user guide documentation.",
+            "external_knowledge": "A 'User Guide Section' within IT platforms and software is essentially a dedicated part of a product's documentation, like an online help page, digital manual, or in-app guidance. Its primary purpose is to provide clear, step-by-step instructions and answers to common questions, helping users understand how to operate the software, utilize its various features, and accomplish specific tasks. For a non-expert, this section serves as an indispensable resource, guiding them through the initial learning process, reducing confusion and frustration by offering instant answers, and ultimately empowering them to confidently use the software to its full potential."
+        },
+        {
+            "id": "API Endpoints Collection",
+            "type": "Concept",
+            "external_knowledge": "An API Endpoints Collection refers to the complete set of specific web addresses (URLs) that an Application Programming Interface (API) offers, with each address acting as a distinct access point to a particular piece of data or a specific function. Its primary purpose is to provide a clear, organized 'map' or 'menu' for other software applications to precisely locate, request, and interact with the various services or resources an IT platform provides. This structured collection enables seamless communication and efficient data exchange between different software systems, making it straightforward for developers to understand how to effectively \"talk\" to an API and integrate its functionalities into their own applications, ultimately boosting interoperability and platform capabilities."
+        },
+        {
+            "id": "API_Endpoint",
+            "type": "Concept",
+            "description": "A specific URL or URI that represents a distinct function or data resource accessible via an API.",
+            "external_knowledge": "An API endpoint is a specific digital address or entry point within an Application Programming Interface (API) that acts as the precise location where software programs send requests to access particular data or trigger specific functions from another system. Its primary purpose is to allow different applications to effectively locate and interact with resources, such as requesting real-time updates from social media, retrieving news articles, or initiating actions like creating a new post. By providing a clear and unique URL for each accessible function or data set, API endpoints enable seamless communication and data exchange between diverse IT platforms and software, allowing them to work together to deliver a wide range of integrated functionalities."
+        },
+        {
+            "id": "User Documentation",
+            "type": "Concept",
+            "description": "Guidance and information for users, covering various topics.",
+            "external_knowledge": "User documentation refers to a collection of written materials, such as manuals, guides, and online help systems, specifically designed to assist individuals in understanding and effectively using a software application or IT platform. Its primary purpose is to bridge the gap between the technical complexity of a system and the user's ability to operate it seamlessly. By providing clear instructions and explanations, user documentation empowers users to navigate the platform, comprehend its features, and ultimately maximize the value they derive from the product, contributing significantly to a positive user experience."
+        },
+        {
+            "id": "API_Specification",
+            "type": "Concept",
+            "description": "A document that defines the structure and functionality of an API.",
+            "external_knowledge": "An API specification is essentially a detailed blueprint that clearly defines how different software components or computer systems can communicate with each other. Its primary purpose is to establish a standardized set of rules and guidelines for how these interactions should occur, including how data is exchanged and security is handled. This standardization ensures that IT platforms and software are consistent, secure, and easily interoperable, meaning they can work together seamlessly and reliably. Beyond technical consistency, API specifications are strategic assets for businesses, enabling efficient digital ecosystems where systems can reliably interact and share information, leading to more maintainable and robust software solutions."
+        },
+        {
+            "id": "User_Guide",
+            "type": "Concept",
+            "description": "Documentation providing instructions and information for users of a system.",
+            "external_knowledge": "A User Guide is a vital piece of technical documentation that provides clear, step-by-step instructions and explanations for navigating, understanding, and effectively using IT platforms, software, or applications. Its primary purpose is to bridge the gap between complex technology and its users, making the product accessible, understandable, and manageable. For non-experts, it serves as an instant reference, helping them quickly get started, learn how specific features work, troubleshoot common issues, and ultimately, make the most of the software's capabilities without needing constant external support. It's crucial for user onboarding, empowering individuals to confidently utilize technology and drive product adoption."
+        },
+        {
+            "id": "Documentation_Section",
+            "type": "Concept",
+            "description": "A distinct part or topic within a larger document, such as a user guide.",
+            "external_knowledge": "A \"Documentation_Section\" in the context of IT platforms and software refers to a crucial collection of written materials that thoroughly describe and explain a software system or application. Its primary purpose is to provide clear, accessible guidance on everything from the software's design and functionality to how it should be used, deployed, or maintained. The key benefits of this documentation are that it empowers a diverse range of individuals\u2014including non-expert users, IT staff, and developers\u2014to effectively understand, utilize, troubleshoot, and update the software, ultimately ensuring smooth operation and maximizing the value of the platform for everyone."
+        },
+        {
+            "id": "Topic",
+            "type": "Concept",
+            "description": "A subject or matter covered within documentation.",
+            "external_knowledge": "In the context of IT platforms and software, a 'Topic' primarily refers to a distinct subject, main theme, or category of information. Drawing from concepts like 'topic modeling,' its core purpose is to automatically identify and extract these underlying themes from large collections of data, such as documents, discussions, or system events. This allows IT professionals and users to efficiently organize, understand, and summarize vast amounts of complex information, thereby making it easier to discover patterns, gain insights, and manage diverse data more effectively."
+        },
+        {
+            "id": "User Guide Sections Collection",
+            "type": "Data_Object"
+        },
+        {
+            "id": "Guide Sections",
+            "type": "Concept",
+            "description": "Individual parts or topics within the user documentation.",
+            "external_knowledge": "In the context of IT platforms and software, a 'User Guide' \u2013 often organized into clear 'Guide Sections' \u2013 serves as an essential roadmap, providing clear, step-by-step instructions that enable users, even non-experts, to effectively navigate and utilize the system or software. Its primary purpose is to bridge the gap between users and technology, ensuring easier adoption and efficient use by making complex processes understandable. By presenting information in an easy-to-find and digestible format, these guides empower users to accomplish tasks with minimal effort, ultimately enhancing their experience, driving product adoption, and reducing the need for extensive external support."
+        },
+        {
+            "id": "Documentation Sections",
+            "type": "Concept",
+            "description": "A collection representing the 486 sections within the user guide.",
+            "external_knowledge": "In the context of IT platforms and software, 'Documentation Sections' refer to the distinct, organized categories of information that comprehensively describe a software product. These sections can range from user manuals and API documentation to technical specifications and design documents, each tailored for different audiences and purposes. The primary purpose of these various sections is to provide clear, accessible guidance to everyone involved: developers who build and maintain the software, IT staff responsible for deployment and management, and end-users who interact with the system. The main benefit is to ensure that all stakeholders have the necessary information to effectively understand, utilize, troubleshoot, and maintain the software, thereby facilitating its proper use, enhancing user experience, and supporting ongoing development and updates."
+        },
+        {
+            "id": "Documentation Topic",
+            "type": "Concept",
+            "description": "A subject or theme covered in documentation.",
+            "external_knowledge": "A 'Documentation Topic' refers to a specific, organized subject area within a broader collection of software documentation, such as details on a program's design, its functionality, or instructions for end-users. The primary purpose of these topics is to provide clear, written information that helps various audiences \u2013 including developers, IT staff, and end-users \u2013 understand how software works, how it's built, and how to deploy and interact with it effectively. The core benefit of well-defined documentation topics is to enhance clarity, streamline development and deployment processes, empower users to utilize platforms and software efficiently, and ensure consistent understanding across all stakeholders."
+        },
+        {
+            "id": "Sections in User Guide",
+            "type": "Concept",
+            "description": "The 486 distinct structural divisions or topics within the User Guide.",
+            "external_knowledge": "In the context of IT platforms and software, \"Sections in a User Guide\" refers to the practice of organizing a user manual into distinct, logical parts or chapters. The primary purpose of this structured approach is to break down complex information into manageable, easy-to-digest segments, making it effortless for users to navigate and quickly locate specific instructions or solutions. By clearly categorizing topics such as setup, features, troubleshooting, or frequently asked questions into dedicated sections, a user guide enhances clarity and usability, allowing non-expert users to efficiently understand how to properly utilize the product, resolve issues, and ultimately maximize their experience with the software or system."
+        },
+        {
+            "id": "Endpoint Definition",
+            "type": "Concept",
+            "description": "The conceptual representation of an API endpoint, as defined by a specification.",
+            "external_knowledge": "An 'Endpoint Definition' refers to any physical or virtual device that connects to a computer network, serving as a specific point where data can enter or leave. These devices are incredibly diverse, including common items like laptops, smartphones, and tablets, as well as servers, smart thermostats, or industrial machinery. The primary purpose and benefit of understanding and managing these endpoints within IT platforms is to ensure comprehensive control and security: it allows organizations to monitor all network access points, authenticate users and devices before granting access, protect these devices from cyber threats using dedicated security measures, and manage the software installed on them, thereby safeguarding the entire network and its valuable data."
+        },
+        {
+            "id": "Topics",
+            "type": "Concept",
+            "description": "Various subjects covered by the user guide sections.",
+            "external_knowledge": "Based on the provided search results, 'Topics' in the context of IT platforms and software refers to distinct subjects, themes, or areas of discussion and exploration within this broad field. Essentially, they are specific ideas or problems that can be researched, learned about, or written about, such as 'the ethics of software development' or 'the challenges of software scalability.' Their primary purpose is to help organize the vast amount of information and complexities within IT and software by breaking them down into manageable, focused areas. This enables clearer understanding, facilitates specialized learning and discussion, and guides specific research or problem-solving efforts."
+        }
+    ],
+    "edges": [
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "Collection of API Endpoints",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Collection of User Guide Sections",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoints",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Sections",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "DEFINES"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "DEFINES"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "DEFINES"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoints Collection",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Sections",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "DEFINES"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "Collection of API Endpoints",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Collection of User Guide Sections",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API_Endpoint",
+            "relationship": "DEFINES"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Documentation",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API_Specification",
+            "target": "API_Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User_Guide",
+            "target": "Documentation_Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoints",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Sections",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "DESCRIBES"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "Section",
+            "target": "Topic",
+            "relationship": "COVERS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "DESCRIBES"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoints Collection",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Sections Collection",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoints",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Guide Sections",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoints",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Sections",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoints",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Sections",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Documentation",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoints",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Sections",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "DEFINES"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoints Collection",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Sections Collection",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "DEFINES"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide Section",
+            "target": "Documentation Topic",
+            "relationship": "COVERS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "Section",
+            "target": "Topic",
+            "relationship": "COVERS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "Collection of API Endpoints",
+            "relationship": "DEFINES"
+        },
+        {
+            "source": "User Guide",
+            "target": "Sections in User Guide",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoints",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Sections",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "Endpoint Definition",
+            "relationship": "DEFINES"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoints Collection",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Sections Collection",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Documentation",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoints",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Sections",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide Sections",
+            "target": "Topics",
+            "relationship": "COVERS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "DEFINES"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "User Guide Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "Collection of API Endpoints",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Guide",
+            "target": "Collection of User Guide Sections",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "DEFINES"
+        },
+        {
+            "source": "User Guide",
+            "target": "Section",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "API Specification",
+            "target": "API Endpoint",
+            "relationship": "CONTAINS"
+        },
+        {
+            "source": "User Documentation",
+            "target": "Documentation Section",
+            "relationship": "CONTAINS"
+        }
+    ]
+}

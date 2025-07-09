@@ -1,0 +1,10 @@
+faiss-cpu
+neo4j
+sentence-transformers
+numpy
+pandas
+tqdm
+PyMuPDF
+python-dotenv
+google-cloud-aiplatform
+google-auth 
