@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route, NavLink } from 'react-router-dom';
 import Home from './pages/Home';
 import Workflow from './pages/Workflow';
 import KnowledgeBase from './pages/KnowledgeBase';
@@ -42,11 +42,7 @@ function UserProfile() {
 }
 
 function Sidebar({ isOpen }) {
-  const chatHistory = [
-    { id: 1, title: 'What is the capital of France?' },
-    { id: 2, title: 'How does photosynthesis work?' },
-    { id: 3, title: 'Latest announcements' },
-  ];
+  const chatHistory = [];
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
@@ -70,10 +66,29 @@ const MoonIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
 );
 
+const WorkflowIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zM2 12h20"></path></svg>
+);
+
+const KnowledgeIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+);
+
+export const ChatIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+export const CollapseIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 9l6 6 6-6"/>
+  </svg>
+);
 
 function App() {
-  const [theme, setTheme] = useState('light');
-  const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [theme, setTheme] = useState('dark');
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     document.body.className = theme;
@@ -97,14 +112,20 @@ function App() {
               <button className="menu-button" onClick={toggleSidebar}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
-              <Link to="/" className="logo">SKENZER</Link>
-            </div>
+              <NavLink to="/" className="logo">SKENZER</NavLink>
+      </div>
             <nav className="nav-links">
-              <Link to="/workflow" className="nav-button">Workflow</Link>
-              <Link to="/knowledge-base" className="nav-button">Knowledge Base</Link>
+              <NavLink to="/workflow" className="nav-button">
+                <WorkflowIcon />
+                <span>Workflow</span>
+              </NavLink>
+              <NavLink to="/knowledge-base" className="nav-button">
+                <KnowledgeIcon />
+                <span>Knowledge Base</span>
+              </NavLink>
               <button className="theme-toggle" onClick={toggleTheme}>
                 {theme === 'light' ? <SunIcon /> : <MoonIcon />}
-              </button>
+        </button>
               <UserProfile />
             </nav>
           </div>

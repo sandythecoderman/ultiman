@@ -13,6 +13,9 @@ from ..models.agent_models import (
     AgentSession, ReasoningStep, ToolResult, 
     HallucinationAlert, ToolExecutionContext
 )
+from ..tools.infraon_api_caller import InfraonApiCaller
+from ..tools.knowledge_graph_querier import KnowledgeGraphQuerier
+from ..tools.vector_store_querier import VectorStoreQuerier
 
 logger = logging.getLogger(__name__)
 
@@ -102,10 +105,18 @@ class AgentOrchestrator:
     def _initialize_vertex_ai(self):
         """Initialize Vertex AI with proper authentication"""
         try:
-            # Set up credentials path
-            creds_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '../../Ultiman-cred.json')
-            if creds_path and os.path.exists(creds_path):
-                os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = creds_path
+            # --- Path Correction ---
+            # Construct an absolute path to the credentials file to avoid relative path issues.
+            # It navigates four levels up from this file (app/core/orchestrator.py) to the project root.
+            PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
+            creds_filename = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', 'Ultiman-cred.json')
+            creds_path = os.path.join(PROJECT_ROOT, creds_filename)
+            
+            if not os.path.exists(creds_path):
+                raise FileNotFoundError(f"Google credentials not found at absolute path: {creds_path}")
+
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = creds_path
+            logger.info(f"🔑 Using credentials from absolute path: {creds_path}")
             
             # Initialize Vertex AI
             vertexai.init(project=self.project_id, location=self.location)
@@ -121,24 +132,21 @@ class AgentOrchestrator:
     
     def _register_tools(self):
         """Register all available tools"""
-        try:
-            # Import and register Infraon API Caller
-            from ..tools.infraon_api_caller import InfraonApiCaller
-            self.register_tool("InfraonApiCaller", InfraonApiCaller())
-            
-            # Import and register Knowledge Graph Querier
-            from ..tools.knowledge_graph_querier import KnowledgeGraphQuerier
-            self.register_tool("KnowledgeGraphQuerier", KnowledgeGraphQuerier())
-            
-            # Import and register Vector Store Querier
-            from ..tools.vector_store_querier import VectorStoreQuerier
-            self.register_tool("VectorStoreQuerier", VectorStoreQuerier())
-            
-            logger.info(f"✅ All tools registered successfully: {list(self.tools.keys())}")
-            
-        except Exception as e:
-            logger.error(f"❌ Failed to register tools: {str(e)}")
-            # Continue without tools rather than crashing
+        tool_classes = {
+            "InfraonApiCaller": InfraonApiCaller,
+            "KnowledgeGraphQuerier": KnowledgeGraphQuerier,
+            "VectorStoreQuerier": VectorStoreQuerier,
+        }
+
+        for name, ToolClass in tool_classes.items():
+            try:
+                tool_instance = ToolClass()
+                if tool_instance:
+                    self.register_tool(name, tool_instance)
+                else:
+                    logger.warning(f"{name} failed to initialize and will not be available.")
+            except Exception as e:
+                logger.error(f"❌ Failed to instantiate or register tool {name}: {str(e)}", exc_info=True)
     
     def register_tool(self, name: str, tool_instance):
         """Register a tool with the orchestrator"""

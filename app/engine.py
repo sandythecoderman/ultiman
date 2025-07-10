@@ -5,30 +5,32 @@ import numpy as np
 from neo4j import GraphDatabase, exceptions
 from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Any
+import google.generativeai as genai
 
 # --- Configuration ---
+TOP_K_RESULTS = 5 # Set a sensible, configurable default
 # Get the absolute path to the project root directory, which is one level up from this file's directory
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "password")
-EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"
-API_DB_PATH = os.path.join(PROJECT_ROOT, "data", "api_index")
-DOCS_DB_PATH = os.path.join(PROJECT_ROOT, "data", "docs_index")
+EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+VECTOR_DB_PATH = os.path.join(PROJECT_ROOT, "services", "data-pipeline", "faiss_index") # Corrected path
 
-class QueryEngine:
+
+class GeminiRAG:
     """
     A comprehensive query engine that combines knowledge graph traversal
     with semantic vector search to answer complex queries about the Infraon platform.
     """
     def __init__(self):
-        print("Initializing Query Engine...")
+        print("Initializing RAG Engine...")
         self.driver = self._connect_to_neo4j()
         self.embedding_model = self._load_embedding_model()
-        self.api_db = self._load_vector_db("api")
-        self.docs_db = self._load_vector_db("docs")
+        self.vector_db = self._load_vector_db()
         self.entity_cache = self._cache_entities()
-        print("Query Engine Initialized Successfully.")
+        self.llm = self._initialize_llm()
+        print("RAG Engine Initialized Successfully.")
 
     def _connect_to_neo4j(self):
         try:
@@ -45,27 +47,40 @@ class QueryEngine:
             print("Please check your NEO4J_USER and NEO4J_PASSWORD environment variables.")
             exit(1)
 
+    def _initialize_llm(self):
+        """Initializes the Generative AI model using service account credentials."""
+        try:
+            # The library will automatically find and use GOOGLE_APPLICATION_CREDENTIALS
+            # if it's set in the environment. Let's just initialize the model.
+            model = genai.GenerativeModel('gemini-2.5-flash')
+            print("Generative AI model initialized successfully using service account.")
+            return model
+        except Exception as e:
+            print(f"Error initializing Generative AI model: {e}")
+            print("Please ensure the GOOGLE_APPLICATION_CREDENTIALS environment variable is set correctly.")
+            return None
+
     def _load_embedding_model(self):
         print(f"Loading embedding model: {EMBEDDING_MODEL}...")
         # Use trust_remote_code=True for this specific model
-        model = SentenceTransformer(EMBEDDING_MODEL, trust_remote_code=True)
+        model = SentenceTransformer(EMBEDDING_MODEL)
         print("Embedding model loaded.")
         return model
 
-    def _load_vector_db(self, db_name: str):
-        path_prefix = API_DB_PATH if db_name == "api" else DOCS_DB_PATH
-        index_path = f"{path_prefix}.faiss"
-        content_path = f"{path_prefix.replace('_index', '_content')}.json"
+    def _load_vector_db(self):
+        index_path = f"{VECTOR_DB_PATH}.bin"
+        mapping_path = f"{VECTOR_DB_PATH.replace('_index', '_id_mapping')}.json"
         
-        print(f"Loading {db_name} vector database from {index_path}...")
+        print(f"Loading vector database from {index_path}...")
         try:
             index = faiss.read_index(index_path)
-            with open(content_path, "r", encoding='utf-8') as f:
-                content = json.load(f)
-            print(f"{db_name.capitalize()} DB loaded: {index.ntotal} vectors.")
-            return {"index": index, "content": content}
+            with open(mapping_path, "r", encoding='utf-8') as f:
+                content_mapping = json.load(f)
+            print(f"Vector DB loaded: {index.ntotal} vectors.")
+            # The mapping file maps index positions to original content IDs
+            return {"index": index, "mapping": content_mapping}
         except Exception as e:
-            print(f"Failed to load vector database '{db_name}' from {path_prefix}: {e}")
+            print(f"Failed to load vector database from {VECTOR_DB_PATH}: {e}")
             print("Please ensure the database files were generated correctly by the ingestion pipeline.")
             exit(1)
 
@@ -76,7 +91,7 @@ class QueryEngine:
             # Cache all known entity names in lowercase for faster matching
             return {record["name"] for record in result}
 
-    def _find_entities_in_query(self, query_text: str) -> set:
+    def _find_entities_in_query(self, query_text: str) -> List[str]:
         """Finds known graph entities mentioned in the user's query."""
         found_entities = set()
         # Use a simple text search, looking for cached entity names in the query
@@ -85,10 +100,13 @@ class QueryEngine:
         for entity in self.entity_cache:
             if entity in query_lower:
                 found_entities.add(entity)
-        return found_entities
+        return list(found_entities) # Convert set to list for consistency with _get_graph_context
 
-    def _get_graph_context(self, entities: set, limit: int = 10) -> str:
-        """Retrieves a subgraph of context for a set of entities."""
+    def _get_graph_context(self, entities: list, limit: int = 10) -> str:
+        """
+        Traverses the knowledge graph from a starting set of entities to retrieve
+        relevant context.
+        """
         if not entities:
             return "No relevant entities found in the knowledge graph."
 
@@ -111,42 +129,85 @@ class QueryEngine:
         return "\\n".join(context_parts) if context_parts else "No direct relationships found for the given entities."
 
 
-    def _semantic_search(self, query_text: str, db_name: str, k: int = 3) -> List[Dict[str, Any]]:
-        """Performs semantic search on the specified vector database."""
-        db = self.api_db if db_name == "api" else self.docs_db
+    def _semantic_search(self, query_text: str, k: int = TOP_K_RESULTS) -> List[Dict[str, Any]]:
+        """Performs semantic search on the vector database."""
+        
+        # --- DIRECT FIX ---
+        # No matter what k was before, force it to a valid number if it's zero or less.
+        if k <= 0:
+            k = TOP_K_RESULTS # Set a sensible default like 5
+
         query_embedding = self.embedding_model.encode([query_text])
         
         # Faiss requires a 2D array of float32
         query_embedding_np = np.array(query_embedding).astype('float32')
         
-        distances, indices = db["index"].search(query_embedding_np, k)
+        distances, indices = self.vector_db["index"].search(query_embedding_np, k)
         
         results = []
         for i in range(k):
             if i < len(indices[0]):
-                idx = indices[0][i]
-                # Ensure the content is a dictionary, not just a string
-                if isinstance(db["content"][idx], dict):
-                    results.append(db["content"][idx])
-                else: # Handle the case where content might just be text
-                    results.append({"text": db["content"][idx]})
+                idx = str(indices[0][i]) # mapping keys are strings
+                # Use the mapping to find the original feature name
+                original_info = self.vector_db["mapping"].get(idx, {})
+                results.append(original_info)
         return results
 
-    def _decide_search_strategy(self, query_text: str) -> str:
-        """Determines whether to search the API or Docs DB based on query intent."""
-        action_verbs = ["create", "add", "update", "delete", "get", "find", "assign", "remove", "set", "how do i"]
-        if any(verb in query_text.lower() for verb in action_verbs):
-            return "api"
-        return "docs"
+    def _create_llm_prompt(self, user_query: str, vector_context: list, graph_context: str) -> str:
+        """
+        Formats the retrieved data into a comprehensive prompt for the LLM.
+        """
+        # Format the retrieved context into readable strings
+        # Assuming the vector context items have a 'feature_name' and 'description'
+        vector_text = "\\n".join([f"- {item.get('feature_name', '')}: {item.get('description', 'No description available.')}" for item in vector_context])
 
-    def process_query(self, query_text: str) -> Dict[str, Any]:
+        prompt = f"""
+        You are Ultiman, a helpful and highly skilled AI assistant for the Infraon product.
+        Your task is to answer the user's question based *only* on the context provided below.
+
+        **Instructions:**
+        1.  Synthesize the information from the "Retrieved Text" and "Related Graph Data" to formulate your answer.
+        2.  Provide a clear, concise, and helpful response.
+        3.  If the context does not contain the answer, you MUST state: "I do not have enough information to answer that question." Do not make up information.
+        4.  If the context mentions API endpoints, list them clearly.
+
+        ---
+        **CONTEXT 1: Retrieved Text from User Guide**
+        {vector_text}
+        ---
+        **CONTEXT 2: Related Graph Data**
+        {graph_context}
+        ---
+
+        **User's Question:**
+        {user_query}
+
+        **Your Answer:**
+        """
+        return prompt
+
+    def _invoke_llm(self, prompt: str) -> str:
+        """Invokes the LLM to get a response."""
+        if not self.llm:
+            return "The Language Model is not available. Please check the API key configuration."
+        try:
+            response = self.llm.generate_content(prompt)
+            # Add a check for the response content
+            if response and response.text:
+                return response.text
+            else:
+                return "Received an empty response from the Language Model."
+        except Exception as e:
+            print(f"Error invoking LLM: {e}")
+            return "There was an error communicating with the Language Model."
+
+    def query(self, query_text: str) -> str:
         """
         Processes a user query through the full RAG pipeline.
-        1. Finds entities in the query.
+        1. Finds entities.
         2. Retrieves context from the knowledge graph.
-        3. Decides which vector DB to search.
-        4. Performs semantic search.
-        5. Assembles the final context for an LLM.
+        3. Performs semantic search.
+        4. Invokes an LLM to generate a response.
         """
         print(f"\\n--- Processing Query: '{query_text}' ---")
 
@@ -156,30 +217,49 @@ class QueryEngine:
 
         # 2. Graph Context Retrieval
         graph_context = self._get_graph_context(entities)
-        print("Step 2: Retrieved Graph Context:")
-        print("---")
-        print(graph_context)
-        print("---")
+        print("Step 2: Retrieved Graph Context...")
         
         # 3. Vector DB Search
-        search_target = self._decide_search_strategy(query_text)
-        print(f"Step 3: Query seems {'action-oriented' if search_target == 'api' else 'informational'}. Searching {search_target.capitalize()} Vector DB...")
-        
-        search_results = self._semantic_search(query_text, search_target)
-        print("Step 3a: Top Semantic Search Results:")
-        print("---")
-        for i, res in enumerate(search_results):
-            print(f"{i+1}. {res.get('text', 'N/A')}")
-        print("---")
+        print(f"Step 3: Searching Vector DB...")
+        search_results = self._semantic_search(query_text)
+        print(f"Step 3a: Top Semantic Search Results: {[res.get('feature_name', 'N/A') for res in search_results]}")
 
-        # 4. Assemble Final Context
-        final_context = {
-            "user_query": query_text,
-            "graph_context": graph_context,
-            "vector_db_results": [res.get('text', 'N/A') for res in search_results],
-            "comment": "In a full application, this context would be passed to a generative LLM to synthesize a final answer."
-        }
+        # 4. LLM Prompt Generation and Invocation
+        print("Step 4: Generating prompt and invoking LLM...")
+        prompt = self._create_llm_prompt(query_text, search_results, graph_context)
+        final_answer = self._invoke_llm(prompt)
         
-        print("\nStep 4: Final combined context is ready.")
-        
-        return final_context 
+        print("Step 5: Final answer generated.")
+        return final_answer 
+
+    def generate_workflow_from_prompt(self, query: str):
+        # This is a basic prompt. A more advanced implementation would include
+        # more examples, constraints, and details about the available node types.
+        prompt = f"""
+You are a workflow generation assistant. Based on the user's request, create a directed graph of nodes and edges.
+
+Return the response as a single JSON object with two keys: "nodes" and "edges".
+
+- "nodes": A list of node objects. Each node must have:
+  - "id": A unique string identifier (e.g., "node-1", "node-2").
+  - "position": An object with "x" and "y" coordinates. Arrange the nodes in a logical flow from left to right.
+  - "data": An object with a "label" for the node's name.
+  - "type": Can be "input", "output", or "default". The first node should be "input", the last "output".
+
+- "edges": A list of edge objects. Each edge must have:
+  - "id": A unique string identifier (e.g., "edge-1").
+  - "source": The "id" of the source node.
+  - "target": The "id" of the target node.
+  - "animated": Set this to true.
+
+User Request: "{query}"
+
+Produce the JSON output now.
+"""
+        try:
+            # We expect the model to return a JSON string, which we then parse.
+            response = self.llm.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            print(f"Error generating workflow with Gemini: {e}")
+            return None 

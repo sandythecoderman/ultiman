@@ -6,6 +6,7 @@ import os
 from typing import Optional
 from app.core.orchestrator import AgentOrchestrator
 from app.tools.knowledge_graph_querier import KnowledgeGraphQuerier
+from fastapi.responses import JSONResponse
 
 # Configure logging
 logging.basicConfig(
@@ -38,6 +39,8 @@ class ChatResponse(BaseModel):
     session_id: str
     tools_used: list[str] = []
     reasoning_steps: list[str] = []
+    nodes: Optional[list] = None
+    edges: Optional[list] = None
 
 @app.get("/health")
 async def health_check():
@@ -63,11 +66,34 @@ async def chat_endpoint(request: ChatRequest):
             for step in session_result.reasoning_steps
         ]
         
+        nodes, edges = None, None
+        # If the KG was queried, or if the query implies a workflow, return a graph
+        if "KnowledgeGraphQuerier" in session_result.tools_used:
+            graph_data = await get_knowledge_graph()
+            nodes = graph_data.get("nodes")
+            edges = graph_data.get("edges")
+        elif 'create' in request.query.lower() or 'generate' in request.query.lower():
+            # This is a mock graph generation for demonstration.
+            # A real implementation would involve the LLM generating these steps.
+            nodes = [
+                {'id': '1', 'position': {'x': 250, 'y': 25}, 'data': {'label': 'Start Workflow'}, 'type': 'start'},
+                {'id': '2', 'position': {'x': 250, 'y': 150}, 'data': {'label': f'Execute: {request.query}'}, 'type': 'execute'},
+                {'id': '3', 'position': {'x': 250, 'y': 275}, 'data': {'label': 'Process Results'}, 'type': 'process'},
+                {'id': '4', 'position': {'x': 250, 'y': 400}, 'data': {'label': 'End Workflow'}, 'type': 'end'},
+            ]
+            edges = [
+                {'id': 'e1-2', 'source': '1', 'target': '2', 'animated': True},
+                {'id': 'e2-3', 'source': '2', 'target': '3', 'animated': True},
+                {'id': 'e3-4', 'source': '3', 'target': '4', 'animated': True},
+            ]
+
         return ChatResponse(
             response=session_result.final_response or "I was unable to process your request.",
             session_id=session_result.session_id,
             tools_used=session_result.tools_used,
-            reasoning_steps=reasoning_steps
+            reasoning_steps=reasoning_steps,
+            nodes=nodes,
+            edges=edges,
         )
         
     except Exception as e:

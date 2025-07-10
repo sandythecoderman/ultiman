@@ -7,18 +7,7 @@ import ReactFlow, {
   addEdge,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import NodeTypes from '../components/NodeTypes';
-import NodeStatistics from '../components/NodeStatistics';
-import SelectedNode from '../components/SelectedNode';
-import NodeDescription from '../components/NodeDescription';
-
-const typeColors = {
-  'Platform': '#00A9FF',
-  'Core Modules': '#FF007F',
-  'Sub-modules & Services': '#FFA500',
-  'API Endpoints': '#32CD32',
-  'Unknown': '#808080'
-};
+import './KnowledgeBase.css';
 
 const KnowledgeBase = () => {
   const [nodes, setNodes] = useState([]);
@@ -28,21 +17,12 @@ const KnowledgeBase = () => {
   useEffect(() => {
     const fetchGraphData = async () => {
       try {
-        const response = await fetch('http://localhost:8000/knowledge_graph');
+        const response = await fetch('http://localhost:8001/knowledge_graph');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        
-        const styledNodes = data.nodes.map(node => ({
-          ...node,
-          style: { 
-            background: typeColors[node.data.type] || typeColors['Unknown'], 
-            color: 'white' 
-          },
-        }));
-
-        setNodes(styledNodes);
+        setNodes(data.nodes);
         setEdges(data.edges);
       } catch (error) {
         console.error("Could not fetch graph data:", error);
@@ -67,13 +47,23 @@ const KnowledgeBase = () => {
     setSelectedNode(node);
   };
 
+  const nodeTypesList = [
+    'Platform', 'Core Modules', 'Sub-modules & Services', 'API Endpoints'
+  ];
+
   return (
-    <div className="workflow-page">
-      <div className="left-panel">
-        <h2>Node Types</h2>
-        <NodeTypes />
+    <div className="kb-page">
+      <div className="kb-left-panel">
+        <div className="kb-panel-section">
+          <h3 className="kb-panel-title">Node Types</h3>
+          <ul className="kb-node-types-list">
+            {nodeTypesList.map(type => (
+              <li key={type} className="kb-node-type-item">{type}</li>
+            ))}
+          </ul>
+        </div>
       </div>
-      <div className="center-panel" style={{ height: '100%', padding: 0 }}>
+      <div className="kb-center-panel">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -83,17 +73,29 @@ const KnowledgeBase = () => {
           onNodeClick={onNodeClick}
           fitView
         >
-          <Background />
+          <Background color="var(--sidebar-border)" gap={16} />
           <Controls />
         </ReactFlow>
       </div>
-      <div className="right-panel">
-        <h2>Node Description</h2>
-        <NodeDescription node={selectedNode} />
-        <h2 style={{marginTop: '1rem'}}>Node Statistics</h2>
-        <NodeStatistics nodes={nodes} />
-        <h2 style={{marginTop: '1rem'}}>Selected Node</h2>
-        <SelectedNode node={selectedNode} />
+      <div className="kb-right-panel">
+        <div className="kb-panel-section">
+          <h3 className="kb-panel-title">Node Description</h3>
+          <p className="kb-placeholder">
+            {selectedNode ? selectedNode.data.label : 'No description available.'}
+          </p>
+        </div>
+        <div className="kb-panel-section">
+          <h3 className="kb-panel-title">Node Statistics</h3>
+          <p className="kb-placeholder">
+            {nodes.length} Nodes
+          </p>
+        </div>
+        <div className="kb-panel-section">
+          <h3 className="kb-panel-title">Selected Node</h3>
+          <p className="kb-placeholder">
+            {selectedNode ? selectedNode.id : 'Click on a node to see its details'}
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -1,0 +1,29 @@
+.analysis-results {
+  padding: 1.5rem;
+  background-color: var(--sidebar-bg);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: var(--text-color);
+  margin-top: 1.5rem;
+}
+
+.analysis-results h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--sidebar-border);
+  padding-bottom: 0.75rem;
+}
+
+.analysis-content p {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--subtitle-color);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.analysis-placeholder {
+  font-style: italic;
+  color: var(--subtitle-color);
+} 

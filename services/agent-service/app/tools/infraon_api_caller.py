@@ -14,12 +14,15 @@ class InfraonApiCaller:
     
     def __init__(self):
         self.base_url = os.getenv('INFRAON_BASE_URL', 'https://infraonpoc.sd.everest-ims.com')
-        self.token = os.getenv('INFRAON_TOKEN', '')
-        self.csrf_token = os.getenv('INFRAON_CSRF_TOKEN', '')
+        self.username = os.getenv('INFRAON_USERNAME')
+        self.password = os.getenv('INFRAON_PASSWORD')
+        self.token = None  # Will be populated after login
+        self.csrf_token = None # Will be populated after login
         self.timeout = 30
         
-        # API endpoints mapping - Updated based on actual Infraon URL patterns
+        # API endpoints mapping
         self.endpoints = {
+            'login': '/ux/auth/login', # Added login endpoint
             'announcements': '/ux/common/announcement/announcements/',
             'tickets': '/ux/helpdesk/tickets/',
             'services': '/ux/common/services/',
@@ -29,7 +32,7 @@ class InfraonApiCaller:
             'reports': '/ux/reports/',
         }
         
-        logger.info(f"🔗 InfraonApiCaller initialized with base URL: {self.base_url}")
+        logger.info(f"🔗 InfraonApiCaller initialized for user: {self.username}")
     
     async def execute(self, parameters: Dict[str, Any], context: ToolExecutionContext) -> Dict[str, Any]:
         """
@@ -50,6 +53,13 @@ class InfraonApiCaller:
         logger.info(f"🌐 Making {method} request to Infraon endpoint: {endpoint}")
         
         try:
+            # --- Auto-Login Logic ---
+            if not self.token and endpoint != 'login':
+                logger.info("🔐 No token found, attempting to log in first...")
+                login_success = await self._login()
+                if not login_success:
+                    raise Exception("Authentication failed. Please check your Infraon credentials.")
+
             # Get the full endpoint URL
             endpoint_path = self.endpoints.get(endpoint)
             if not endpoint_path:
@@ -90,6 +100,37 @@ class InfraonApiCaller:
                 'message': f"Failed to retrieve data from {endpoint}"
             }
     
+    async def _login(self) -> bool:
+        """Logs into Infraon to get authentication tokens."""
+        if not self.username or not self.password:
+            logger.error("Infraon username or password not configured.")
+            return False
+
+        login_url = f"{self.base_url}{self.endpoints['login']}"
+        login_data = {"username": self.username, "password": self.password}
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(login_url, json=login_data, timeout=self.timeout) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        self.token = data.get('data', {}).get('token')
+                        self.csrf_token = response.cookies.get('csrftoken')
+                        
+                        if self.token:
+                            logger.info("✅ Successfully logged into Infraon and retrieved token.")
+                            return True
+                        else:
+                            logger.error(f"❌ Login successful, but no token found in response: {data}")
+                            return False
+                    else:
+                        error_text = await response.text()
+                        logger.error(f"❌ Infraon login failed with status {response.status}: {error_text}")
+                        return False
+        except Exception as e:
+            logger.error(f"❌ Exception during Infraon login: {str(e)}")
+            return False
+
     def _prepare_headers(self) -> Dict[str, str]:
         """Prepare headers for Infraon API requests"""
         
@@ -101,8 +142,7 @@ class InfraonApiCaller:
         
         # Add authentication headers
         if self.token:
-            # Infraon uses raw token format (no Bearer prefix)
-            headers['Authorization'] = self.token
+            headers['Authorization'] = f"Token {self.token}"
         
         if self.csrf_token:
             headers['X-CSRFToken'] = self.csrf_token

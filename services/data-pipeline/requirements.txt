@@ -1,0 +1,13 @@
+google-api-python-client
+google-auth
+google-auth-httplib2
+google-auth-oauthlib
+google-generativeai
+pydantic
+PyPDF2
+google-cloud-aiplatform
+ipython
+tenacity
+neo4j
+faiss-cpu
+pymupdf 

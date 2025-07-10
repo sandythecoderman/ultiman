@@ -1,0 +1,55 @@
+.empty-workflow-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  color: var(--subtitle-color);
+  padding: 2rem;
+  user-select: none;
+}
+
+.empty-icon {
+  margin-bottom: 1.5rem;
+  color: var(--nav-button-active-text);
+}
+
+.empty-workflow-container h2 {
+  font-size: 1.5rem;
+  color: var(--text-color);
+  margin-bottom: 0.5rem;
+}
+
+.empty-workflow-container p {
+  max-width: 400px;
+  line-height: 1.6;
+}
+
+.example-prompts {
+  margin-top: 2rem;
+  text-align: left;
+  font-size: 0.85rem;
+  background-color: var(--chat-bg);
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--sidebar-border);
+}
+
+.example-prompts span {
+  font-weight: 600;
+  color: var(--text-color);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.example-prompts ul {
+  list-style-type: '→ ';
+  padding-left: 1rem;
+  margin: 0;
+  color: var(--subtitle-color);
+}
+
+.example-prompts li {
+  margin-bottom: 0.5rem;
+} 

@@ -27,8 +27,13 @@ class VectorStoreQuerier:
     """Tool for querying FAISS vector stores for semantic search"""
     
     def __init__(self):
-        self.vector_store_path = os.getenv('VECTOR_STORE_PATH', './data/vector_stores')
-        self.faiss_index_path = os.getenv('FAISS_INDEX_PATH', './data/faiss_indexes')
+        # --- Path Correction ---
+        # Construct absolute paths to the data directories to avoid relative path issues.
+        # Navigates up from this file (app/tools/vector_store_querier.py) to the project root.
+        PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+        
+        self.vector_store_path = os.getenv('VECTOR_STORE_PATH', os.path.join(PROJECT_ROOT, 'services/agent-service/data/vector_stores'))
+        self.faiss_index_path = os.getenv('FAISS_INDEX_PATH', os.path.join(PROJECT_ROOT, 'services/agent-service/data/faiss_indexes'))
         self.model_name = 'all-MiniLM-L6-v2'  # Lightweight sentence transformer
         
         # Initialize sentence transformer
@@ -63,6 +68,8 @@ class VectorStoreQuerier:
         self._loaded_metadata = {}
         
         logger.info(f"🔍 VectorStoreQuerier initialized with model: {self.model_name}")
+        logger.info(f"📚 FAISS index path: {self.faiss_index_path}")
+        logger.info(f"📚 Metadata path: {self.vector_store_path}")
     
     async def execute(self, parameters: Dict[str, Any], context: ToolExecutionContext) -> Dict[str, Any]:
         """
