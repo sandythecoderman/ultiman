@@ -1,9 +1,9 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import logging
 import os
-from typing import Optional
+from typing import Optional, Dict
 from app.core.orchestrator import AgentOrchestrator
 from app.tools.knowledge_graph_querier import KnowledgeGraphQuerier
 from fastapi.responses import JSONResponse
@@ -30,9 +30,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+UPLOADS_DIR = "uploads"
+if not os.path.exists(UPLOADS_DIR):
+    os.makedirs(UPLOADS_DIR)
+
 class ChatRequest(BaseModel):
     query: str
     session_id: Optional[str] = None
+    file_info: Optional[Dict[str, str]] = None
 
 class ChatResponse(BaseModel):
     response: str
@@ -46,6 +51,25 @@ class ChatResponse(BaseModel):
 async def health_check():
     return {"status": "healthy", "service": "agent-service"}
 
+@app.post("/uploadfile/")
+async def create_upload_file(file: UploadFile = File(...)):
+    file_path = os.path.join(UPLOADS_DIR, file.filename)
+    try:
+        with open(file_path, "wb") as buffer:
+            buffer.write(await file.read())
+        logger.info(f"✅ File saved: {file.filename}")
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "File uploaded successfully",
+                "filename": file.filename,
+            },
+        )
+    except Exception as e:
+        logger.error(f"❌ Error saving file: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Could not save file: {e}")
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
     """
@@ -54,11 +78,26 @@ async def chat_endpoint(request: ChatRequest):
     try:
         logger.info(f"🚀 Received query: {request.query}")
         
-        # Initialize orchestrator (in production, this would be a singleton)
+        file_path = None
+        if request.file_info and 'filename' in request.file_info:
+            filename = request.file_info['filename']
+            # Security: Ensure the file is within the UPLOADS_DIR
+            safe_path = os.path.abspath(os.path.join(UPLOADS_DIR, filename))
+            if os.path.commonpath([safe_path, os.path.abspath(UPLOADS_DIR)]) != os.path.abspath(UPLOADS_DIR):
+                raise HTTPException(status_code=400, detail="Invalid filename.")
+            
+            if os.path.exists(safe_path):
+                file_path = safe_path
+            else:
+                logger.warning(f"⚠️ File specified but not found: {filename}")
+
         orchestrator = AgentOrchestrator()
         
-        # Process the query using ReAct loop
-        session_result = await orchestrator.process_query(request.query, request.session_id)
+        session_result = await orchestrator.process_query(
+            request.query, 
+            request.session_id,
+            file_path=file_path
+        )
         
         # Format reasoning steps for response
         reasoning_steps = [

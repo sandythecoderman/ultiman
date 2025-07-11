@@ -168,7 +168,7 @@ class GeminiRAG:
         **Instructions:**
         1.  Synthesize the information from the "Retrieved Text" and "Related Graph Data" to formulate your answer.
         2.  Provide a clear, concise, and helpful response.
-        3.  If the context does not contain the answer, you MUST state: "I do not have enough information to answer that question." Do not make up information.
+        3.  If the context is empty or does not contain the answer, politely state that you do not have enough information about that specific topic. Do not make up information. However, if the user is making casual conversation (e.g., saying "hello"), respond naturally and friendly.
         4.  If the context mentions API endpoints, list them clearly.
 
         ---
@@ -209,6 +209,11 @@ class GeminiRAG:
         3. Performs semantic search.
         4. Invokes an LLM to generate a response.
         """
+        # --- DIRECT FIX for conversational greetings ---
+        greetings = ["hi", "hello", "hey", "yo", "sup", "howdy"]
+        if query_text.lower().strip().rstrip("!.") in greetings:
+            return "Hello! How can I help you today?"
+
         print(f"\\n--- Processing Query: '{query_text}' ---")
 
         # 1. Entity Extraction

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import ReactFlow, {
   ReactFlowProvider,
@@ -17,6 +18,7 @@ import AnalysisResults from '../components/AnalysisResults';
 import Chat from '../components/Chat';
 import CustomNode from '../components/CustomNode';
 import EmptyWorkflow from '../components/EmptyWorkflow';
+import { WORKFLOW_GENERATE_ENDPOINT } from '../config';
 
 const nodeTypes = {
   start: CustomNode,
@@ -31,8 +33,12 @@ const Workflow = () => {
   const [edges, setEdges] = useState([]);
   const [selectedNode, setSelectedNode] = useState(null);
   const [analysis, setAnalysis] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [isChatPanelCollapsed, setIsChatPanelCollapsed] = useState(false);
+  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
   const reactFlowWrapper = useRef(null);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const onNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -50,11 +56,49 @@ const Workflow = () => {
     setAnalysis(null);
   };
 
-  const handleSendMessage = async (query) => {
-    const response = await fetch('http://localhost:8001/chat', {
+  useEffect(() => {
+    const promptFromHome = location.state?.prompt;
+    if (promptFromHome) {
+      const userMessage = { sender: 'user', text: promptFromHome };
+      
+      // Update messages to show the user's prompt
+      setMessages(prev => [...prev, userMessage]);
+
+      // Define an async function to call the backend
+      const fetchWorkflow = async () => {
+        try {
+          const agentResponse = await handleSendMessage({ query: promptFromHome });
+          const agentMessage = {
+            sender: 'agent',
+            text: agentResponse.response || 'Sorry, I had trouble understanding that.',
+          };
+          setMessages(prev => [...prev, userMessage, agentMessage]);
+          if (agentResponse.nodes && agentResponse.edges) {
+            setNodes(agentResponse.nodes);
+            setEdges(agentResponse.edges);
+          }
+        } catch (error) {
+           const errorMessage = {
+            sender: 'agent',
+            text: error.message || 'Failed to fetch. Please check the backend logs.',
+            isError: true,
+          };
+          setMessages(prev => [...prev, userMessage, errorMessage]);
+        }
+      };
+
+      fetchWorkflow();
+      
+      // Clear the state to prevent re-triggering
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location, navigate]);
+
+  const handleSendMessage = async (payload) => {
+    const response = await fetch(WORKFLOW_GENERATE_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -89,43 +133,65 @@ const Workflow = () => {
     setIsChatPanelCollapsed(prev => !prev);
   };
 
+  const toggleRightPanel = () => {
+    setIsRightPanelCollapsed(prev => !prev);
+  };
+
   return (
     <div className="workflow-page">
-      <div className={`left-panel ${isChatPanelCollapsed ? 'collapsed' : ''}`}>
-        <Chat onSendMessage={handleSendMessage} />
-      </div>
-      <div className="center-panel">
-        <button onClick={toggleChatPanel} className="panel-toggle-button">
-          {isChatPanelCollapsed ? <FiChevronRight /> : <FiChevronLeft />}
+      {/* The canvas is now the base layer */}
+      <ReactFlowProvider>
+        <div className="react-flow-container">
+          {nodes.length === 0 ? (
+            <EmptyWorkflow />
+          ) : (
+            <ReactFlow
+              ref={reactFlowWrapper}
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeClick={onNodeClick}
+              fitView
+              nodeTypes={nodeTypes}
+            >
+              <Background />
+              <Controls />
+              <MiniMap nodeStrokeWidth={3} zoomable pannable />
+            </ReactFlow>
+          )}
+        </div>
+      </ReactFlowProvider>
+
+      {/* Panels are now floating on top */}
+      <div className={`left-panel-container ${isChatPanelCollapsed ? 'collapsed' : ''}`}>
+        <div className="left-panel">
+          <Chat
+            messages={messages}
+            onMessagesChange={setMessages}
+            onSendMessage={handleSendMessage}
+            placeholder="Describe the workflow you want to create..."
+          />
+        </div>
+        <button onClick={toggleChatPanel} className="panel-toggle-button left">
+          <FiChevronLeft size={20} />
         </button>
-        {nodes.length === 0 ? (
-          <EmptyWorkflow />
-        ) : (
-          <ReactFlow
-            ref={reactFlowWrapper}
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeClick={onNodeClick}
-            fitView
-            nodeTypes={nodeTypes}
-          >
-            <Background />
-            <Controls />
-            <MiniMap nodeStrokeWidth={3} zoomable pannable />
-          </ReactFlow>
-        )}
       </div>
-      <div className="right-panel">
-        {analysis ? (
-          <AnalysisResults analysis={analysis} onClear={() => setAnalysis(null)} />
-        ) : selectedNode ? (
-          <NodeProperties node={selectedNode} onNodeDataChange={handleNodeDataChange} />
-        ) : (
-          <div className="placeholder">Select a node to see its properties or run an analysis.</div>
-        )}
+
+      <div className={`right-panel-container ${isRightPanelCollapsed ? 'collapsed' : ''}`}>
+        <div className="right-panel">
+          {analysis ? (
+            <AnalysisResults analysis={analysis} onClear={() => setAnalysis(null)} />
+          ) : selectedNode ? (
+            <NodeProperties node={selectedNode} onNodeDataChange={handleNodeDataChange} />
+          ) : (
+            <div className="placeholder">Select a node to see its properties or run an analysis.</div>
+          )}
+        </div>
+        <button onClick={toggleRightPanel} className="panel-toggle-button right">
+          <FiChevronRight size={20} />
+        </button>
       </div>
     </div>
   );

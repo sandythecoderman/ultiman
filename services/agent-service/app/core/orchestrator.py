@@ -153,7 +153,7 @@ class AgentOrchestrator:
         self.tools[name] = tool_instance
         logger.info(f"🔧 Registered tool: {name}")
     
-    async def process_query(self, user_query: str, session_id: Optional[str] = None) -> AgentSession:
+    async def process_query(self, user_query: str, session_id: Optional[str] = None, file_path: Optional[str] = None) -> AgentSession:
         """
         Main entry point for processing user queries using ReAct methodology
         """
@@ -165,8 +165,22 @@ class AgentOrchestrator:
         logger.info(f"🚀 Starting ReAct loop for query: {user_query}")
         
         try:
+            # Augment context with file content if provided
+            file_context = ""
+            if file_path and os.path.exists(file_path):
+                logger.info(f"📄 Reading file context from: {file_path}")
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        file_content = f.read()
+                    file_context = f"--- Start of Uploaded File Content ---\n{file_content}\n--- End of Uploaded File Content ---\n\n"
+                except Exception as e:
+                    logger.error(f"❌ Could not read file {file_path}: {e}")
+                    # Optionally, inform the user about the failure
+                    file_context = "A file was uploaded, but I was unable to read its content.\n\n"
+
+
             # Start the ReAct loop
-            final_response = await self._react_loop(session)
+            final_response = await self._react_loop(session, file_context)
             session.complete_session(final_response)
             
             logger.info(f"✅ Query processed successfully. Tools used: {session.tools_used}")
@@ -178,12 +192,12 @@ class AgentOrchestrator:
         
         return session
     
-    async def _react_loop(self, session: AgentSession) -> str:
+    async def _react_loop(self, session: AgentSession, file_context: str = "") -> str:
         """
         Implementation of the ReAct (Reasoning and Acting) loop
         """
         iteration = 0
-        context = self._build_initial_context(session.user_query)
+        context = self._build_initial_context(session.user_query, file_context)
         
         while iteration < self.max_iterations:
             iteration += 1
@@ -240,24 +254,22 @@ class AgentOrchestrator:
         session.add_reasoning_step("final_answer", final_response)
         return final_response
     
-    def _build_initial_context(self, user_query: str) -> str:
+    def _build_initial_context(self, user_query: str, file_context: str = "") -> str:
         """Build the initial context for the conversation"""
         available_tools = ", ".join(self.tools.keys()) if self.tools else "No tools available yet"
         
-        return f"""
+        initial_prompt = f"""
         You are an AI assistant for the Infraon Infinity Platform. You help users get information and perform tasks.
         
         CRITICAL ANTI-HALLUCINATION RULES:
-        1. NEVER generate fictional data, IDs, dates, or examples
-        2. If no real data is found, explicitly state "No data found" 
-        3. ONLY use data returned by tools - do not create sample data
-        4. If you don't have enough information, ask for clarification or use tools to get real data
-        5. NEVER use dates from 2022-2023 unless they come from actual tool results
+        - NEVER make up information. If you don't know something, say so.
+        - If a user asks for a specific ID (e.g., Announcement, Ticket), and you cannot find it with a tool, state that you cannot find it. DO NOT generate a fake one.
+        - Prioritize using tools to get real-time information.
         
         Available tools: {available_tools}
-        
-        User Query: {user_query}
         """
+
+        return f"{initial_prompt}\n\n{file_context}User query: {user_query}"
     
     def _build_thought_prompt(self, session: AgentSession, context: str) -> str:
         """Build the prompt for the reasoning/thinking step"""

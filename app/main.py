@@ -19,7 +19,7 @@ app = FastAPI(
 # This allows the frontend (running on a different port) to communicate with this backend.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174"],  # The origin of your frontend app
+    allow_origins=["*"],  # Allow all origins
     allow_credentials=True,
     allow_methods=["*"],  # Allows all methods (GET, POST, etc.)
     allow_headers=["*"],  # Allows all headers
@@ -30,8 +30,13 @@ app.add_middleware(
 class QueryRequest(BaseModel):
     query: str = Field(..., description="The natural language query to process.", example="how do I add a ticket for a user?")
 
-class QueryResponse(BaseModel):
-    answer: str
+class ChatResponse(BaseModel):
+    response: str
+
+class WorkflowGenerationResponse(BaseModel):
+    response: str
+    nodes: List[Dict]
+    edges: List[Dict]
 
 # --- Application Startup ---
 # This is crucial for performance as it avoids reloading models and DB connections on every request.
@@ -45,7 +50,7 @@ def startup_event():
     print("Application startup complete.")
 
 # --- API Endpoints ---
-@app.post("/query", response_model=QueryResponse)
+@app.post("/query", response_model=ChatResponse)
 def get_query_response(request: QueryRequest):
     """Receives a user query and returns the RAG pipeline's response."""
     if not rag_engine:
@@ -53,7 +58,7 @@ def get_query_response(request: QueryRequest):
     
     try:
         answer = rag_engine.query(request.query)
-        return {"answer": answer}
+        return {"response": answer}
     except Exception as e:
         # Log the exception for debugging
         print(f"An error occurred while processing the query: {e}")
@@ -64,7 +69,7 @@ def get_query_response(request: QueryRequest):
 class WorkflowGenerationRequest(BaseModel):
     prompt: str
 
-@app.post("/workflow/generate")
+@app.post("/workflow/generate", response_model=WorkflowGenerationResponse)
 def generate_workflow(request: WorkflowGenerationRequest):
     """
     Generates a workflow graph based on a user prompt using an LLM.
@@ -83,8 +88,13 @@ def generate_workflow(request: WorkflowGenerationRequest):
             workflow_json_str = workflow_json_str.strip()[7:-4]
         
         workflow_data = json.loads(workflow_json_str)
-        # Here, you could add validation to ensure the structure is correct
-        return workflow_data
+        
+        response_text = "I've generated a workflow based on your request. You can see it on the canvas."
+        return {
+            "response": response_text,
+            "nodes": workflow_data.get("nodes", []),
+            "edges": workflow_data.get("edges", [])
+        }
     except json.JSONDecodeError:
         print("Error: LLM returned invalid JSON for workflow generation.")
         print("Raw output:", workflow_json_str)

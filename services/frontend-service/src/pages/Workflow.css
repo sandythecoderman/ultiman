@@ -239,6 +239,51 @@
   background: #ff4d4f;
 }
 
+.left-panel,
+.right-panel {
+  transition: width 0.3s ease-in-out;
+}
+
+.right-panel.collapsed {
+  width: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.panel-toggle-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #2a2a2e;
+  border: 1px solid #444;
+  color: #fff;
+  width: 28px;
+  height: 48px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background-color 0.2s;
+}
+
+.panel-toggle-button:hover {
+  background-color: #3a3a3e;
+}
+
+.panel-toggle-button.left {
+  left: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.panel-toggle-button.right {
+  right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
 .left-panel h2 {
   margin: 0;
   padding: 1.25rem;

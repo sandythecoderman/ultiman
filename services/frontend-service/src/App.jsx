@@ -31,27 +31,55 @@ function UserProfile() {
       </button>
       {isOpen && (
         <div className="dropdown-menu">
-          <a href="#" className="dropdown-item">Profile</a>
-          <a href="#" className="dropdown-item">Settings</a>
+          <a href="#" className="dropdown-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            Profile
+          </a>
+          <a href="#" className="dropdown-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path></svg>
+            Settings
+          </a>
           <div className="dropdown-divider"></div>
-          <a href="#" className="dropdown-item">Logout</a>
+          <a href="#" className="dropdown-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16,17 21,12 16,7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            Logout
+          </a>
         </div>
       )}
     </div>
   );
 }
 
+const PlusIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
+);
+
+const MessageIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+);
+
 function Sidebar({ isOpen }) {
-  const chatHistory = [];
+  const chatHistory = [
+    { id: 1, title: 'Drafting an email to a client' },
+    { id: 2, title: 'Summarizing a website for a report' },
+    { id: 3, title: 'Creating a social media post' },
+  ];
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
       <div className="sidebar-header">
-        <button className="new-chat-button">New Chat</button>
+        <button className="new-chat-button">
+          <PlusIcon />
+          <span>New Chat</span>
+        </button>
       </div>
+      <h3 className="sidebar-subtitle">Recent</h3>
       <ul className="chat-history-list">
         {chatHistory.map(chat => (
-          <li key={chat.id}>{chat.title}</li>
+          <li key={chat.id}>
+            <MessageIcon />
+            <span>{chat.title}</span>
+          </li>
         ))}
       </ul>
     </aside>
@@ -113,21 +141,24 @@ function App() {
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
               <NavLink to="/" className="logo">SKENZER</NavLink>
-      </div>
-            <nav className="nav-links">
-              <NavLink to="/workflow" className="nav-button">
-                <WorkflowIcon />
-                <span>Workflow</span>
-              </NavLink>
-              <NavLink to="/knowledge-base" className="nav-button">
-                <KnowledgeIcon />
-                <span>Knowledge Base</span>
-              </NavLink>
+            </div>
+            <div className="header-right">
+              <nav className="nav-links">
+                <NavLink to="/workflow" className="nav-button">
+                  <WorkflowIcon />
+                  <span>Workflow</span>
+                </NavLink>
+                <NavLink to="/knowledge-base" className="nav-button">
+                  <KnowledgeIcon />
+                  <span>Knowledge Base</span>
+                </NavLink>
+              </nav>
+              <div className="separator"></div>
               <button className="theme-toggle" onClick={toggleTheme}>
                 {theme === 'light' ? <SunIcon /> : <MoonIcon />}
-        </button>
+              </button>
               <UserProfile />
-            </nav>
+            </div>
           </div>
         </header>
         <main className="main-content">

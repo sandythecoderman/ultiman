@@ -6,3 +6,4 @@ venv/
 
 # Ignore Node.js dependencies
 /services/frontend-service/node_modules 
+node_modules
