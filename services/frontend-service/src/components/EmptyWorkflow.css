@@ -5,14 +5,15 @@
   justify-content: center;
   height: 100%;
   text-align: center;
-  color: var(--subtitle-color);
+  color: var(--text-color-light);
   padding: 2rem;
   user-select: none;
+  font-family: var(--font-sans);
 }
 
 .empty-icon {
   margin-bottom: 1.5rem;
-  color: var(--nav-button-active-text);
+  color: var(--accent-color);
 }
 
 .empty-workflow-container h2 {
@@ -24,16 +25,17 @@
 .empty-workflow-container p {
   max-width: 400px;
   line-height: 1.6;
+  color: var(--text-color-light);
 }
 
 .example-prompts {
   margin-top: 2rem;
   text-align: left;
   font-size: 0.85rem;
-  background-color: var(--chat-bg);
+  background-color: var(--secondary-bg);
   padding: 1rem 1.5rem;
   border-radius: 8px;
-  border: 1px solid var(--sidebar-border);
+  border: 1px solid var(--border-color);
 }
 
 .example-prompts span {
@@ -47,7 +49,7 @@
   list-style-type: '→ ';
   padding-left: 1rem;
   margin: 0;
-  color: var(--subtitle-color);
+  color: var(--text-color-light);
 }
 
 .example-prompts li {

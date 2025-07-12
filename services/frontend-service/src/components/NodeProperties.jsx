@@ -322,12 +322,12 @@ const NodeProperties = ({ node, onNodeDataChange }) => {
             <div className="wf-detail-section">
               <h4>Node Label</h4>
               <div className="wf-input-group">
-                <input
-                  name="label"
+        <input
+          name="label"
                   className="wf-node-input"
-                  type="text"
-                  value={formData.label || ''}
-                  onChange={handleInputChange}
+          type="text"
+          value={formData.label || ''}
+          onChange={handleInputChange}
                   placeholder="Enter node label..."
                 />
                 <div className="wf-edit-controls">
@@ -339,7 +339,7 @@ const NodeProperties = ({ node, onNodeDataChange }) => {
                   </button>
                 </div>
               </div>
-            </div>
+      </div>
 
             {/* Configuration Fields */}
             {Object.keys(config.fields || {}).length > 0 && (
@@ -374,14 +374,14 @@ const NodeProperties = ({ node, onNodeDataChange }) => {
                           ))}
                         </select>
                       ) : field.type === 'textarea' ? (
-                        <textarea
-                          name={key}
+          <textarea
+            name={key}
                           className="wf-node-textarea"
-                          value={formData[key] || ''}
-                          onChange={handleInputChange}
+            value={formData[key] || ''}
+            onChange={handleInputChange}
                           placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}...`}
-                          rows={4}
-                        />
+            rows={4}
+          />
                       ) : field.type === 'range' ? (
                         <div className="wf-range-field">
                           <input
@@ -482,8 +482,8 @@ const NodeProperties = ({ node, onNodeDataChange }) => {
                     <div className="wf-activity-action">{activity.action}</div>
                     <div className="wf-activity-user">by {activity.user}</div>
                   </div>
-                </div>
-              ))}
+        </div>
+      ))}
             </div>
           </div>
         )}

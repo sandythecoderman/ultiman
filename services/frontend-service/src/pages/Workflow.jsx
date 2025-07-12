@@ -28,7 +28,9 @@ import {
   FiSettings, 
   FiPlay,
   FiX,
-  FiGrid 
+  FiGrid,
+  FiMaximize,
+  FiMinimize 
 } from 'react-icons/fi';
 
 const nodeTypes = {
@@ -40,8 +42,129 @@ const nodeTypes = {
 };
 
 const Workflow = () => {
-  const [nodes, setNodes] = useState([]);
-  const [edges, setEdges] = useState([]);
+  const [nodes, setNodes] = useState([
+    {
+      id: 'start-1',
+      type: 'start',
+      position: { x: 100, y: 100 },
+      data: { 
+        label: 'Start Process',
+        description: 'Initialize the workflow',
+        status: 'completed'
+      }
+    },
+    {
+      id: 'process-1',
+      type: 'process',
+      position: { x: 300, y: 100 },
+      data: { 
+        label: 'Data Validation',
+        description: 'Validate incoming data format',
+        status: 'running'
+      }
+    },
+    {
+      id: 'execute-1',
+      type: 'execute',
+      position: { x: 500, y: 100 },
+      data: { 
+        label: 'API Call',
+        description: 'Execute external API request',
+        status: 'pending'
+      }
+    },
+    {
+      id: 'process-2',
+      type: 'process',
+      position: { x: 200, y: 250 },
+      data: { 
+        label: 'Error Handling',
+        description: 'Handle validation errors',
+        status: 'idle'
+      }
+    },
+    {
+      id: 'process-3',
+      type: 'process',
+      position: { x: 400, y: 250 },
+      data: { 
+        label: 'Data Transform',
+        description: 'Transform API response data',
+        status: 'idle'
+      }
+    },
+    {
+      id: 'execute-2',
+      type: 'execute',
+      position: { x: 600, y: 250 },
+      data: { 
+        label: 'Save Results',
+        description: 'Store processed data',
+        status: 'idle'
+      }
+    },
+    {
+      id: 'end-1',
+      type: 'end',
+      position: { x: 400, y: 400 },
+      data: { 
+        label: 'Complete',
+        description: 'Workflow completed successfully',
+        status: 'idle'
+      }
+    }
+  ]);
+  const [edges, setEdges] = useState([
+    {
+      id: 'e1',
+      source: 'start-1',
+      target: 'process-1',
+      label: 'begin',
+      type: 'smoothstep'
+    },
+    {
+      id: 'e2',
+      source: 'process-1',
+      target: 'execute-1',
+      label: 'valid',
+      type: 'smoothstep'
+    },
+    {
+      id: 'e3',
+      source: 'process-1',
+      target: 'process-2',
+      label: 'error',
+      type: 'smoothstep'
+    },
+    {
+      id: 'e4',
+      source: 'execute-1',
+      target: 'process-3',
+      label: 'success',
+      type: 'smoothstep'
+    },
+    {
+      id: 'e5',
+      source: 'process-3',
+      target: 'execute-2',
+      label: 'transform',
+      type: 'smoothstep'
+    },
+    {
+      id: 'e6',
+      source: 'execute-2',
+      target: 'end-1',
+      label: 'saved',
+      type: 'smoothstep'
+    },
+    {
+      id: 'e7',
+      source: 'process-2',
+      target: 'end-1',
+      label: 'handled',
+      type: 'smoothstep'
+    }
+  ]);
   const [selectedNode, setSelectedNode] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -243,7 +366,21 @@ const Workflow = () => {
       case 'test-node':
         if (data.nodeData) {
           console.log('Testing node:', data.nodeData.id);
-          // TODO: Implement node testing functionality
+          // Simulate node testing with status update
+          setNodes((nds) => nds.map(node => 
+            node.id === data.nodeData.id 
+              ? { ...node, data: { ...node.data, status: 'running' } }
+              : node
+          ));
+          
+          // Simulate test completion after 2 seconds
+          setTimeout(() => {
+            setNodes((nds) => nds.map(node => 
+              node.id === data.nodeData.id 
+                ? { ...node, data: { ...node.data, status: 'completed' } }
+                : node
+            ));
+          }, 2000);
         }
         break;
 
@@ -274,8 +411,28 @@ const Workflow = () => {
         break;
 
       case 'quick-connect':
-        // TODO: Implement quick connect mode
-        console.log('Quick connect mode activated for:', data.nodeData?.id);
+        if (data.nodeData) {
+          // Find the next available node to connect to
+          const availableNodes = nodes.filter(node => 
+            node.id !== data.nodeData.id && 
+            !edges.some(edge => edge.source === data.nodeData.id && edge.target === node.id)
+          );
+          
+          if (availableNodes.length > 0) {
+            const targetNode = availableNodes[0];
+            const newEdge = {
+              id: `edge-${Date.now()}`,
+              source: data.nodeData.id,
+              target: targetNode.id,
+              label: 'connects',
+              type: 'smoothstep'
+            };
+            setEdges(eds => [...eds, newEdge]);
+            console.log('Quick connected:', data.nodeData.id, 'to', targetNode.id);
+          } else {
+            console.log('No available nodes to connect to');
+          }
+        }
         break;
 
       default:
@@ -357,9 +514,48 @@ const Workflow = () => {
           }
           break;
         case 'F11':
+          togglePresentationMode();
+          event.preventDefault();
+          break;
         case 'f':
           if (isCtrl) {
             togglePresentationMode();
+            event.preventDefault();
+          }
+          break;
+        case 'e':
+          if (isCtrl) {
+            exportAsImage();
+            event.preventDefault();
+          }
+          break;
+        case 'a':
+          if (isCtrl) {
+            // Select all nodes
+            setNodes(nds => nds.map(node => ({ ...node, selected: true })));
+            event.preventDefault();
+          }
+          break;
+        case 'r':
+          if (isCtrl) {
+            // Reset/clear workflow
+            setNodes([]);
+            setEdges([]);
+            setSelectedNode(null);
+            event.preventDefault();
+          }
+          break;
+        case 'z':
+          if (isCtrl && !event.shiftKey) {
+            // Undo functionality placeholder
+            console.log('Undo action');
+            event.preventDefault();
+          }
+          break;
+        case 'y':
+          if (isCtrl) {
+            // Redo functionality placeholder
+            console.log('Redo action');
             event.preventDefault();
           }
           break;

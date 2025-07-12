@@ -5,7 +5,7 @@
   gap: 1rem;
   padding: 1rem;
   box-sizing: border-box;
-  background: var(--bg-color);
+  background: var(--primary-bg);
 }
 
 /* ===== LEFT PANEL - CHAT ===== */
@@ -125,7 +125,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--bg-color);
+  background: var(--primary-bg);
   z-index: 9999;
   display: flex;
   flex-direction: column;
@@ -416,11 +416,13 @@
 
 /* ===== REACT FLOW OVERRIDES ===== */
 .wf-graph-container .react-flow {
-  background: var(--bg-color);
+  background: var(--primary-bg);
+  color: var(--text-color);
 }
 
 .wf-presentation-canvas .react-flow {
-  background: var(--bg-color);
+  background: var(--primary-bg);
+  color: var(--text-color);
 }
 
 .wf-graph-container .react-flow__background {
@@ -460,6 +462,44 @@
 
 .wf-graph-container .react-flow__node {
   font-family: var(--font-sans);
+  color: var(--text-color);
+}
+
+.wf-graph-container .react-flow__node text {
+  fill: var(--text-color);
+}
+
+.wf-graph-container .react-flow__node-default,
+.wf-graph-container .react-flow__node-input,
+.wf-graph-container .react-flow__node-output {
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+}
+
+.wf-presentation-canvas .react-flow__node {
+  font-family: var(--font-sans);
+  color: var(--text-color);
+}
+
+.wf-presentation-canvas .react-flow__node text {
+  fill: var(--text-color);
+}
+
+/* Additional React Flow text styling */
+.react-flow__node-default,
+.react-flow__node-input,
+.react-flow__node-output {
+  background: var(--input-bg) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+.react-flow__node-default .react-flow__handle,
+.react-flow__node-input .react-flow__handle,
+.react-flow__node-output .react-flow__handle {
+  background: var(--accent-color) !important;
+  border: 1px solid var(--border-color) !important;
 }
 
 .wf-graph-container .react-flow__edge {
