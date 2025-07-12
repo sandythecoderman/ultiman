@@ -4,13 +4,10 @@ import {
   FiPaperclip, 
   FiMessageCircle, 
   FiRefreshCw, 
-  FiSettings,
-  FiClock,
+  FiMoreHorizontal,
   FiUser,
   FiCpu,
-  FiPlus,
-  FiTrash2,
-  FiDownload
+  FiSettings
 } from 'react-icons/fi';
 import toast, { Toaster } from 'react-hot-toast';
 import './Chat.css';
@@ -25,6 +22,7 @@ const Chat = ({
   const [inputValue, setInputValue] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
+  const [showActions, setShowActions] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -142,105 +140,60 @@ const Chat = ({
     URL.revokeObjectURL(url);
   };
 
-  const formatTime = (timestamp) => {
-    if (!timestamp) return '';
-    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const getMessageStats = () => {
-    return {
-      total: messages.length,
-      user: messages.filter(m => m.sender === 'user').length,
-      agent: messages.filter(m => m.sender === 'agent').length,
-      errors: messages.filter(m => m.isError).length
-    };
-  };
-
-  const stats = getMessageStats();
-
   return (
     <div className="wf-chat-panel">
-      {/* Header Section */}
-      <div className="wf-panel-section header">
-        <div className="wf-chat-header">
-          <div className="wf-chat-title">
-            <FiMessageCircle className="wf-title-icon" />
-            <span>Workflow Assistant</span>
-          </div>
-          <div className="wf-chat-actions">
-            <button className="wf-icon-btn" onClick={clearChat} title="Clear Chat">
-              <FiTrash2 />
-            </button>
-            <button className="wf-icon-btn" onClick={exportChat} title="Export Chat">
-              <FiDownload />
-            </button>
-            <button className="wf-icon-btn" title="Settings">
-              <FiSettings />
-            </button>
-          </div>
+      {/* Minimal Header */}
+      <div className="wf-chat-header">
+        <div className="wf-chat-title">
+          <FiMessageCircle className="wf-title-icon" />
+          <span>AI Assistant</span>
+          <div className={`wf-status-dot ${isThinking ? 'thinking' : 'ready'}`}></div>
         </div>
-      </div>
-
-      {/* Stats Section */}
-      <div className="wf-panel-section">
-        <h4 className="wf-panel-title">Conversation Stats</h4>
-        <div className="wf-stats-grid">
-          <div className="wf-stat-item">
-            <div className="wf-stat-value">{stats.total}</div>
-            <div className="wf-stat-label">Messages</div>
-          </div>
-          <div className="wf-stat-item">
-            <div className="wf-stat-value">{stats.user}</div>
-            <div className="wf-stat-label">Your Messages</div>
-          </div>
+        <div className="wf-chat-actions">
+          <button 
+            className="wf-icon-btn" 
+            onClick={() => setShowActions(!showActions)}
+            title="More actions"
+          >
+            <FiMoreHorizontal />
+          </button>
+          {showActions && (
+            <div className="wf-actions-dropdown">
+              <button onClick={clearChat}>Clear Chat</button>
+              <button onClick={exportChat}>Export</button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Messages Section */}
-      <div className="wf-panel-section messages-section">
-        <h4 className="wf-panel-title">
-          <span>Conversation</span>
-          <div className="wf-status-indicator">
-            <div className={`wf-status-dot ${isThinking ? 'thinking' : 'ready'}`}></div>
-            <span className="wf-status-text">{isThinking ? 'Thinking...' : 'Ready'}</span>
-          </div>
-        </h4>
-
+      <div className="wf-messages-section">
         <div className="wf-messages-container">
           {messages.length === 0 ? (
             <div className="wf-empty-chat">
               <div className="wf-empty-icon">
                 <FiMessageCircle />
               </div>
-              <h3>Start Your Workflow</h3>
-              <p>Describe the workflow you want to create and I'll help you build it step by step.</p>
-              <div className="wf-suggestions">
-                <div className="wf-suggestion-item" onClick={() => setInputValue("Create a workflow to process customer emails")}>
-                  "Create a workflow to process customer emails"
-                </div>
-                <div className="wf-suggestion-item" onClick={() => setInputValue("Build a data analysis pipeline")}>
-                  "Build a data analysis pipeline"
-                </div>
-                <div className="wf-suggestion-item" onClick={() => setInputValue("Automate social media posting")}>
-                  "Automate social media posting"
-                </div>
+              <h3>Start Building</h3>
+              <p>Describe your workflow idea and I'll help create it.</p>
+              <div className="wf-quick-prompts">
+                <button onClick={() => setInputValue("Create a customer email workflow")}>
+                  📧 Email Processing
+                </button>
+                <button onClick={() => setInputValue("Build a data analysis pipeline")}>
+                  📊 Data Analysis
+                </button>
+                <button onClick={() => setInputValue("Automate content creation")}>
+                  ✨ Content Automation
+                </button>
               </div>
             </div>
           ) : (
             <>
               {messages.map((msg, index) => (
                 <div key={index} className={`wf-message ${msg.sender} ${msg.isError ? 'error' : ''}`}>
-                  <div className="wf-message-header">
-                    <div className="wf-message-sender">
-                      {msg.sender === 'user' ? <FiUser /> : msg.sender === 'agent' ? <FiCpu /> : <FiSettings />}
-                      <span>{msg.sender === 'user' ? 'You' : msg.sender === 'agent' ? 'Assistant' : 'System'}</span>
-                    </div>
-                    {msg.timestamp && (
-                      <div className="wf-message-time">
-                        <FiClock size={12} />
-                        {formatTime(msg.timestamp)}
-                      </div>
-                    )}
+                  <div className="wf-message-avatar">
+                    {msg.sender === 'user' ? <FiUser /> : msg.sender === 'agent' ? <FiCpu /> : <FiSettings />}
                   </div>
                   <div className="wf-message-content">
                     {msg.text}
@@ -249,18 +202,15 @@ const Chat = ({
               ))}
               {isThinking && (
                 <div className="wf-message agent thinking">
-                  <div className="wf-message-header">
-                    <div className="wf-message-sender">
-                      <FiCpu />
-                      <span>Assistant</span>
-                    </div>
+                  <div className="wf-message-avatar">
+                    <FiCpu />
                   </div>
                   <div className="wf-message-content">
                     <div className="wf-thinking-indicator">
                       <div className="wf-thinking-dots">
                         <span></span><span></span><span></span>
                       </div>
-                      <span className="wf-thinking-text">Processing your request...</span>
+                      <span>Analyzing your request...</span>
                     </div>
                   </div>
                 </div>
@@ -271,8 +221,8 @@ const Chat = ({
         </div>
       </div>
 
-      {/* Input Section */}
-      <div className="wf-panel-section input-section">
+      {/* Minimal Input Section */}
+      <div className="wf-input-section">
         {uploadedFile && (
           <div className="wf-uploaded-file">
             <FiPaperclip />
@@ -283,6 +233,13 @@ const Chat = ({
 
         <form className="wf-chat-form" onSubmit={(e) => { e.preventDefault(); handleSend(); }}>
           <div className="wf-input-wrapper">
+            <input
+              type="text"
+              className="wf-chat-input"
+              placeholder={placeholder || "Describe your workflow..."}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+            />
             <button
               type="button"
               className="wf-attachment-btn"
@@ -296,13 +253,6 @@ const Chat = ({
               ref={fileInputRef}
               onChange={handleFileUpload}
               style={{ display: 'none' }}
-            />
-            <input
-              type="text"
-              className="wf-chat-input"
-              placeholder={placeholder || "Describe your workflow idea..."}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
             />
             <button
               type="submit"

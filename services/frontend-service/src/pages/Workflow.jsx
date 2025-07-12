@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import ReactFlow, {
   ReactFlowProvider,
   addEdge,
@@ -13,12 +12,24 @@ import ReactFlow, {
   applyEdgeChanges,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import './Workflow.css';
 import NodeProperties from '../components/NodeProperties';
 import AnalysisResults from '../components/AnalysisResults';
 import Chat from '../components/Chat';
 import CustomNode from '../components/CustomNode';
 import EmptyWorkflow from '../components/EmptyWorkflow';
+import ContextMenu from '../components/ContextMenu';
+import NodeTemplates from '../components/NodeTemplates';
 import { WORKFLOW_GENERATE_ENDPOINT } from '../config';
+import { 
+  FiMaximize, 
+  FiMinimize, 
+  FiDownload, 
+  FiSettings, 
+  FiPlay,
+  FiX,
+  FiGrid 
+} from 'react-icons/fi';
 
 const nodeTypes = {
   start: CustomNode,
@@ -34,8 +45,15 @@ const Workflow = () => {
   const [selectedNode, setSelectedNode] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [isChatPanelCollapsed, setIsChatPanelCollapsed] = useState(false);
-  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
+  const [presentationMode, setPresentationMode] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    type: 'canvas',
+    nodeData: null
+  });
   const reactFlowWrapper = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -55,6 +73,309 @@ const Workflow = () => {
     setSelectedNode(node);
     setAnalysis(null);
   };
+
+  // Template handlers
+  const handleCreateWorkflow = (templateData) => {
+    setNodes(templateData.nodes);
+    setEdges(templateData.edges);
+    setSelectedNode(null);
+    console.log('Created workflow from template:', templateData.template.name);
+  };
+
+  const handleCreateNode = (nodeData) => {
+    setNodes((nds) => [...nds, nodeData]);
+    setSelectedNode(nodeData);
+    console.log('Created node from template:', nodeData.type);
+  };
+
+  // Presentation mode handlers
+  const togglePresentationMode = () => {
+    setPresentationMode(!presentationMode);
+    if (!presentationMode) {
+      // Entering presentation mode
+      document.body.style.overflow = 'hidden';
+    } else {
+      // Exiting presentation mode
+      document.body.style.overflow = 'auto';
+    }
+  };
+
+  // Context menu handlers
+  const onPaneContextMenu = useCallback((event) => {
+    event.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      type: 'canvas',
+      nodeData: null
+    });
+  }, []);
+
+  const onNodeContextMenu = useCallback((event, node) => {
+    event.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      type: 'node',
+      nodeData: node
+    });
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(prev => ({ ...prev, visible: false }));
+  }, []);
+
+  // Generate unique node ID
+  const generateNodeId = () => {
+    return `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  };
+
+  // Auto-layout algorithm using force-directed positioning
+  const autoLayout = useCallback(() => {
+    if (nodes.length === 0) return;
+
+    const nodeWidth = 200;
+    const nodeHeight = 80;
+    const padding = 100;
+
+    // Simple grid layout for demo
+    const cols = Math.ceil(Math.sqrt(nodes.length));
+    const newNodes = nodes.map((node, index) => {
+      const row = Math.floor(index / cols);
+      const col = index % cols;
+      
+      return {
+        ...node,
+        position: {
+          x: col * (nodeWidth + padding),
+          y: row * (nodeHeight + padding)
+        }
+      };
+    });
+
+    setNodes(newNodes);
+  }, [nodes]);
+
+  // Export workflow as image
+  const exportAsImage = useCallback(() => {
+    // Create a simple workflow export for demo
+    const workflowData = {
+      nodes: nodes.map(node => ({
+        id: node.id,
+        type: node.type,
+        label: node.data.label,
+        position: node.position
+      })),
+      edges: edges.map(edge => ({
+        source: edge.source,
+        target: edge.target
+      })),
+      exportedAt: new Date().toISOString()
+    };
+
+    const blob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `workflow-export-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [nodes, edges]);
+
+  // Context menu action handler
+  const handleContextAction = useCallback((action, data) => {
+    console.log('Context action:', action, data);
+
+    switch (action) {
+      case 'create-node':
+        const newNode = {
+          id: generateNodeId(),
+          type: data.type,
+          position: { 
+            x: contextMenu.x - (presentationMode ? 0 : 300), // Adjust for panel offset
+            y: contextMenu.y - 100 
+          },
+          data: { 
+            label: `${data.type.charAt(0).toUpperCase() + data.type.slice(1)} Node` 
+          }
+        };
+        setNodes((nds) => [...nds, newNode]);
+        break;
+
+      case 'duplicate-node':
+        if (data.nodeData) {
+          const duplicatedNode = {
+            ...data.nodeData,
+            id: generateNodeId(),
+            position: {
+              x: data.nodeData.position.x + 50,
+              y: data.nodeData.position.y + 50
+            },
+            data: {
+              ...data.nodeData.data,
+              label: `${data.nodeData.data.label} (Copy)`
+            }
+          };
+          setNodes((nds) => [...nds, duplicatedNode]);
+        }
+        break;
+
+      case 'delete-node':
+        if (data.nodeData) {
+          setNodes((nds) => nds.filter(node => node.id !== data.nodeData.id));
+          setEdges((eds) => eds.filter(edge => 
+            edge.source !== data.nodeData.id && edge.target !== data.nodeData.id
+          ));
+          if (selectedNode?.id === data.nodeData.id) {
+            setSelectedNode(null);
+          }
+        }
+        break;
+
+      case 'edit-node':
+        if (data.nodeData) {
+          setSelectedNode(data.nodeData);
+        }
+        break;
+
+      case 'test-node':
+        if (data.nodeData) {
+          console.log('Testing node:', data.nodeData.id);
+          // TODO: Implement node testing functionality
+        }
+        break;
+
+      case 'export-config':
+        if (data.nodeData) {
+          const nodeConfig = {
+            id: data.nodeData.id,
+            type: data.nodeData.type,
+            data: data.nodeData.data,
+            position: data.nodeData.position
+          };
+          const blob = new Blob([JSON.stringify(nodeConfig, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `node-${data.nodeData.id}-config.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+        break;
+
+      case 'auto-layout':
+        autoLayout();
+        break;
+
+      case 'export-image':
+        exportAsImage();
+        break;
+
+      case 'quick-connect':
+        // TODO: Implement quick connect mode
+        console.log('Quick connect mode activated for:', data.nodeData?.id);
+        break;
+
+      default:
+        console.log('Unknown action:', action);
+    }
+  }, [contextMenu, nodes, selectedNode, autoLayout, exportAsImage, presentationMode]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Ignore if typing in input fields
+      if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      const isCtrl = event.ctrlKey || event.metaKey;
+      
+      switch (event.key) {
+        case '1':
+          if (!isCtrl) {
+            handleContextAction('create-node', { type: 'start' });
+            event.preventDefault();
+          }
+          break;
+        case '2':
+          if (!isCtrl) {
+            handleContextAction('create-node', { type: 'execute' });
+            event.preventDefault();
+          }
+          break;
+        case '3':
+          if (!isCtrl) {
+            handleContextAction('create-node', { type: 'process' });
+            event.preventDefault();
+          }
+          break;
+        case '4':
+          if (!isCtrl) {
+            handleContextAction('create-node', { type: 'end' });
+            event.preventDefault();
+          }
+          break;
+        case 'l':
+        case 'L':
+          if (event.shiftKey) {
+            autoLayout();
+            event.preventDefault();
+          }
+          break;
+        case 't':
+        case 'T':
+          if (isCtrl) {
+            setShowTemplates(true);
+            event.preventDefault();
+          }
+          break;
+        case 'd':
+        case 'D':
+          if (isCtrl && selectedNode) {
+            handleContextAction('duplicate-node', { nodeData: selectedNode });
+            event.preventDefault();
+          }
+          break;
+        case 'Delete':
+        case 'Backspace':
+          if (selectedNode && !isCtrl) {
+            handleContextAction('delete-node', { nodeData: selectedNode });
+            event.preventDefault();
+          }
+          break;
+        case 'Escape':
+          if (presentationMode) {
+            togglePresentationMode();
+          } else if (showTemplates) {
+            setShowTemplates(false);
+          } else {
+            setSelectedNode(null);
+            closeContextMenu();
+          }
+          break;
+        case 'F11':
+        case 'f':
+          if (isCtrl) {
+            togglePresentationMode();
+            event.preventDefault();
+          }
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNode, handleContextAction, autoLayout, closeContextMenu, presentationMode, togglePresentationMode, showTemplates]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, []);
 
   useEffect(() => {
     const promptFromHome = location.state?.prompt;
@@ -129,19 +450,107 @@ const Workflow = () => {
     );
   };
 
-  const toggleChatPanel = () => {
-    setIsChatPanelCollapsed(prev => !prev);
-  };
+  // Presentation mode component
+  if (presentationMode) {
+    return (
+      <div className="wf-presentation-mode">
+        {/* Minimal toolbar */}
+        <div className="wf-presentation-toolbar">
+          <div className="wf-presentation-title">
+            <h2>Workflow Demo</h2>
+            <span>{nodes.length} nodes</span>
+          </div>
+          <div className="wf-presentation-actions">
+            <button onClick={autoLayout} title="Auto Layout">
+              <FiSettings />
+            </button>
+            <button onClick={exportAsImage} title="Export">
+              <FiDownload />
+            </button>
+            <button onClick={togglePresentationMode} title="Exit Presentation (Esc)">
+              <FiX />
+            </button>
+          </div>
+        </div>
 
-  const toggleRightPanel = () => {
-    setIsRightPanelCollapsed(prev => !prev);
-  };
+        {/* Full-screen workflow */}
+        <div className="wf-presentation-canvas">
+          <ReactFlowProvider>
+            {nodes.length === 0 ? (
+              <div className="wf-presentation-empty">
+                <h3>No Workflow to Display</h3>
+                <p>Exit presentation mode to create your workflow</p>
+              </div>
+            ) : (
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onNodeClick={onNodeClick}
+                onPaneContextMenu={onPaneContextMenu}
+                onNodeContextMenu={onNodeContextMenu}
+                fitView
+                nodeTypes={nodeTypes}
+              >
+                <Background />
+                <Controls />
+              </ReactFlow>
+            )}
+          </ReactFlowProvider>
+        </div>
+
+        {/* Context Menu */}
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          visible={contextMenu.visible}
+          type={contextMenu.type}
+          nodeData={contextMenu.nodeData}
+          onClose={closeContextMenu}
+          onAction={handleContextAction}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="workflow-page">
-      {/* The canvas is now the base layer */}
-      <ReactFlowProvider>
-        <div className="react-flow-container">
+    <div className="wf-page">
+      {/* Left Panel - Chat */}
+      <div className="wf-left-panel">
+        <Chat
+          messages={messages}
+          onMessagesChange={setMessages}
+          onSendMessage={handleSendMessage}
+          placeholder="Describe the workflow you want to create..."
+        />
+      </div>
+
+      {/* Center Graph Area */}
+      <div className="wf-graph-container">
+        {/* Graph toolbar */}
+        <div className="wf-graph-toolbar">
+          <div className="wf-graph-info">
+            <span>{nodes.length} nodes • {edges.length} connections</span>
+          </div>
+          <div className="wf-graph-actions">
+            <button onClick={() => setShowTemplates(true)} title="Templates (Ctrl+T)">
+              <FiGrid />
+            </button>
+            <button onClick={autoLayout} title="Auto Layout (Shift+L)">
+              <FiSettings />
+            </button>
+            <button onClick={exportAsImage} title="Export (Ctrl+E)">
+              <FiDownload />
+            </button>
+            <button onClick={togglePresentationMode} title="Presentation Mode (Ctrl+F)">
+              <FiMaximize />
+            </button>
+          </div>
+        </div>
+
+        <ReactFlowProvider>
           {nodes.length === 0 ? (
             <EmptyWorkflow />
           ) : (
@@ -153,6 +562,8 @@ const Workflow = () => {
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
               onNodeClick={onNodeClick}
+              onPaneContextMenu={onPaneContextMenu}
+              onNodeContextMenu={onNodeContextMenu}
               fitView
               nodeTypes={nodeTypes}
             >
@@ -161,38 +572,52 @@ const Workflow = () => {
               <MiniMap nodeStrokeWidth={3} zoomable pannable />
             </ReactFlow>
           )}
-        </div>
-      </ReactFlowProvider>
-
-      {/* Panels are now floating on top */}
-      <div className={`left-panel-container ${isChatPanelCollapsed ? 'collapsed' : ''}`}>
-        <div className="left-panel">
-          <Chat
-            messages={messages}
-            onMessagesChange={setMessages}
-            onSendMessage={handleSendMessage}
-            placeholder="Describe the workflow you want to create..."
-          />
-        </div>
-        <button onClick={toggleChatPanel} className="panel-toggle-button left">
-          <FiChevronLeft size={20} />
-        </button>
+        </ReactFlowProvider>
       </div>
 
-      <div className={`right-panel-container ${isRightPanelCollapsed ? 'collapsed' : ''}`}>
-        <div className="right-panel">
-          {analysis ? (
-            <AnalysisResults analysis={analysis} onClear={() => setAnalysis(null)} />
-          ) : selectedNode ? (
-            <NodeProperties node={selectedNode} onNodeDataChange={handleNodeDataChange} />
-          ) : (
-            <div className="placeholder">Select a node to see its properties or run an analysis.</div>
-          )}
-        </div>
-        <button onClick={toggleRightPanel} className="panel-toggle-button right">
-          <FiChevronRight size={20} />
-        </button>
+      {/* Right Panel - Node Properties */}
+      <div className="wf-right-panel">
+        {analysis ? (
+          <AnalysisResults analysis={analysis} onClear={() => setAnalysis(null)} />
+        ) : selectedNode ? (
+          <NodeProperties node={selectedNode} onNodeDataChange={handleNodeDataChange} />
+        ) : (
+          <div className="wf-placeholder">
+            <div className="wf-placeholder-content">
+              <h3>Agent Workflow Demo</h3>
+              <p>Select a node to view its properties and configuration.</p>
+              <p>Use the chat panel to interact with the AI agent and generate workflow steps.</p>
+              <div className="wf-shortcuts">
+                <h4>Quick Actions:</h4>
+                <p><span>Create nodes</span><kbd>1-4</kbd></p>
+                <p><span>Templates</span><kbd>Ctrl+T</kbd></p>
+                <p><span>Auto-layout</span><kbd>Shift+L</kbd></p>
+                <p><span>Presentation mode</span><kbd>Ctrl+F</kbd></p>
+                <p><span>Right-click menu</span><kbd>Right-click</kbd></p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Context Menu */}
+      <ContextMenu
+        x={contextMenu.x}
+        y={contextMenu.y}
+        visible={contextMenu.visible}
+        type={contextMenu.type}
+        nodeData={contextMenu.nodeData}
+        onClose={closeContextMenu}
+        onAction={handleContextAction}
+      />
+
+      {/* Node Templates */}
+      <NodeTemplates
+        visible={showTemplates}
+        onClose={() => setShowTemplates(false)}
+        onCreateWorkflow={handleCreateWorkflow}
+        onCreateNode={handleCreateNode}
+      />
     </div>
   );
 };

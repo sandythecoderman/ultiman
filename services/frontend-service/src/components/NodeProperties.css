@@ -3,11 +3,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--input-bg);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-large);
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  background: transparent;
 }
 
 /* ===== EMPTY SELECTION ===== */
