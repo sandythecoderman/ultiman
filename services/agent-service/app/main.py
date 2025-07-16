@@ -6,6 +6,7 @@ import os
 from typing import Optional, Dict
 from app.core.orchestrator import AgentOrchestrator
 from app.tools.knowledge_graph_querier import KnowledgeGraphQuerier
+from app.tools.neo4j_service import neo4j_service
 from fastapi.responses import JSONResponse
 
 # Configure logging
@@ -142,75 +143,27 @@ async def chat_endpoint(request: ChatRequest):
 @app.get("/knowledge_graph")
 async def get_knowledge_graph():
     """
-    Fetches the entire knowledge graph from Neo4j and formats it for React Flow.
+    Get complete Neo4j graph data for knowledge base visualization
     """
     try:
-        logger.info("🧠 Fetching knowledge graph")
-        kg_querier = KnowledgeGraphQuerier()
+        logger.info("📊 Fetching Neo4j graph data...")
         
-        # A query to get all nodes and their relationships
-        query = "MATCH (n) OPTIONAL MATCH (n)-[r]->(m) RETURN n, r, m"
+        # Connect to Neo4j
+        neo4j_service.connect()
         
-        results = await kg_querier._execute_query(query, {})
+        # Get complete graph data
+        graph_data = neo4j_service.get_complete_graph_data()
         
-        nodes = []
-        edges = []
-        node_ids = set()
-
-        for record in results:
-            if 'n' in record and record['n'] and record['n']['properties']['id'] not in node_ids:
-                node = record['n']
-                node_data = {
-                    'id': node['properties']['id'],
-                    'position': { 'x': 0, 'y': 0 },
-                    'data': { 
-                        'label': node['properties'].get('name', node['properties']['id']),
-                        'type': list(node['labels'])[0] if node['labels'] else 'Unknown',
-                        'description': node['properties'].get('description', '')
-                    },
-                }
-                nodes.append(node_data)
-                node_ids.add(node['properties']['id'])
-
-            if 'm' in record and record['m'] and record['m']['properties']['id'] not in node_ids:
-                node = record['m']
-                node_data = {
-                    'id': node['properties']['id'],
-                    'position': { 'x': 0, 'y': 0 },
-                    'data': { 
-                        'label': node['properties'].get('name', node['properties']['id']),
-                        'type': list(node['labels'])[0] if node['labels'] else 'Unknown',
-                        'description': node['properties'].get('description', '')
-                    },
-                }
-                nodes.append(node_data)
-                node_ids.add(node['properties']['id'])
-            
-            if 'r' in record and record['r']:
-                rel = record['r']
-                # Ensure source and target are in the record
-                if 'n' in record and 'm' in record and record['n'] and record['m']:
-                    source_id = record['n']['properties']['id']
-                    target_id = record['m']['properties']['id']
-                    edges.append({
-                        'id': f"{source_id}-{rel['type']}-{target_id}",
-                        'source': source_id,
-                        'target': target_id,
-                        'label': rel['type'],
-                        'type': 'step'
-                    })
-
-        # Simple layouting logic
-        for i, node in enumerate(nodes):
-            node['position'] = {'x': (i % 10) * 150, 'y': (i // 10) * 100}
-
-        logger.info(f"✅ Found {len(nodes)} nodes and {len(edges)} edges.")
+        logger.info(f"✅ Successfully fetched graph data: {len(graph_data['nodes'])} nodes, {len(graph_data['relationships'])} relationships")
         
-        return {"nodes": nodes, "edges": edges}
-
+        return JSONResponse(content=graph_data)
+        
     except Exception as e:
         logger.error(f"❌ Error fetching knowledge graph: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch knowledge graph: {str(e)}")
+    finally:
+        # Close connection
+        neo4j_service.close()
 
 @app.post("/stateless_chat", response_model=ChatResponse)
 async def stateless_chat_endpoint(request: ChatRequest):
@@ -241,6 +194,157 @@ async def stateless_chat_endpoint(request: ChatRequest):
         logger.error(f"❌ Error processing stateless chat request: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+
+class ExpandNodeRequest(BaseModel):
+    nodeId: str
+
+@app.post("/api/expand-node")
+async def expand_node(request: ExpandNodeRequest):
+    """
+    Expand a node to show its children
+    """
+    try:
+        logger.info(f"🔍 Expanding node: {request.nodeId}")
+        
+        # Connect to Neo4j
+        if not neo4j_service.driver:
+            neo4j_service.connect()
+        
+        # Query for child nodes
+        with neo4j_service.driver.session() as session:
+            result = session.run("""
+                MATCH p = (startNode)-[:HAS_CHILD]->(childNode)
+                WHERE startNode.id = $nodeId
+                RETURN p
+            """, nodeId=request.nodeId)
+            
+            new_nodes = []
+            new_edges = []
+            seen_nodes = set()
+            
+            for record in result:
+                path = record["p"]
+                nodes = path.nodes
+                relationships = path.relationships
+                
+                # Process nodes
+                for node in nodes:
+                    node_id = str(node.id)
+                    if node_id not in seen_nodes:
+                        seen_nodes.add(node_id)
+                        labels = list(node.labels)
+                        properties = dict(node)
+                        
+                        # Extract name from properties
+                        name = properties.get("name") or properties.get("title") or labels[0] if labels else f"Node {node_id}"
+                        
+                        # Map label to category
+                        category = neo4j_service._map_label_to_category(labels[0] if labels else None)
+                        
+                        new_nodes.append({
+                            "id": node_id,
+                            "name": name,
+                            "labels": labels,
+                            "properties": properties,
+                            "category": category,
+                            "description": properties.get("description") or properties.get("summary") or f"{labels[0] if labels else 'Node'} with ID {node_id}"
+                        })
+                
+                # Process relationships
+                for rel in relationships:
+                    new_edges.append({
+                        "id": str(rel.id),
+                        "source": str(rel.start_node.id),
+                        "target": str(rel.end_node.id),
+                        "type": rel.type,
+                        "properties": dict(rel)
+                    })
+        
+        logger.info(f"✅ Found {len(new_nodes)} new nodes and {len(new_edges)} new edges")
+        
+        return JSONResponse(content={
+            "nodes": new_nodes,
+            "edges": new_edges
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error expanding node {request.nodeId}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error expanding node: {str(e)}")
+
+@app.get("/api/schema-info")
+async def get_schema_info():
+    """
+    Get Neo4j schema information including labels and relationship types with counts
+    """
+    try:
+        logger.info("🔍 Fetching Neo4j schema information")
+        
+        # Connect to Neo4j
+        if not neo4j_service.driver:
+            neo4j_service.connect()
+        
+        with neo4j_service.driver.session() as session:
+            # Get node labels with counts
+            label_result = session.run("""
+                CALL db.labels() YIELD label
+                CALL apoc.cypher.run(
+                    'MATCH (n:' + label + ') RETURN count(n) as count', 
+                    {}
+                ) YIELD value
+                RETURN label, value.count as count
+            """)
+            
+            labels = []
+            for record in label_result:
+                labels.append({
+                    "name": record["label"],
+                    "count": record["count"]
+                })
+            
+            # Get relationship types with counts  
+            rel_type_result = session.run("""
+                CALL db.relationshipTypes() YIELD relationshipType
+                CALL apoc.cypher.run(
+                    'MATCH ()-[r:' + relationshipType + ']->() RETURN count(r) as count',
+                    {}
+                ) YIELD value
+                RETURN relationshipType, value.count as count
+            """)
+            
+            relationship_types = []
+            for record in rel_type_result:
+                relationship_types.append({
+                    "name": record["relationshipType"],
+                    "count": record["count"]
+                })
+        
+        logger.info(f"✅ Retrieved {len(labels)} labels and {len(relationship_types)} relationship types")
+        
+        return JSONResponse(content={
+            "labels": labels,
+            "relationshipTypes": relationship_types
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error fetching schema info: {str(e)}")
+        # Fallback to simple query without APOC if it's not available
+        try:
+            with neo4j_service.driver.session() as session:
+                # Simple label query
+                label_result = session.run("CALL db.labels() YIELD label RETURN label")
+                labels = [{"name": record["label"], "count": 0} for record in label_result]
+                
+                # Simple relationship type query
+                rel_result = session.run("CALL db.relationshipTypes() YIELD relationshipType RETURN relationshipType")
+                relationship_types = [{"name": record["relationshipType"], "count": 0} for record in rel_result]
+                
+                return JSONResponse(content={
+                    "labels": labels,
+                    "relationshipTypes": relationship_types
+                })
+        except Exception as fallback_error:
+            logger.error(f"❌ Fallback schema query failed: {str(fallback_error)}")
+            raise HTTPException(status_code=500, detail=f"Error fetching schema info: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

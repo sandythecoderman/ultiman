@@ -28,9 +28,7 @@ import {
   FiSettings, 
   FiPlay,
   FiX,
-  FiGrid,
-  FiMaximize,
-  FiMinimize 
+  FiGrid
 } from 'react-icons/fi';
 
 const nodeTypes = {
