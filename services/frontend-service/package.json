@@ -18,10 +18,7 @@
   },
   "dependencies": {
     "d3": "^7.9.0",
-    "neo4j-driver": "^5.28.1",
-    "neo4j-visualization": "^0.0.1",
     "react": "^18.3.1",
-    "react-d3-graph": "^2.6.0",
     "react-dom": "^18.3.1",
     "react-feather": "^2.0.10",
     "react-icons": "^5.5.0",

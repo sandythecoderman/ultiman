@@ -40,21 +40,57 @@
 
 body.dark {
   /* Dark Theme */
-  --primary-bg: #0a0a0a;
-  --secondary-bg: #111111;
+  --primary-bg: #0f172a;
+  --secondary-bg: #1e293b;
   --accent-color: #22c55e;
-  --text-color: #f9fafb;
-  --text-color-light: #d1d5db;
-  --border-color: #1f2937;
-  --input-bg: #1a1a1a;
-  --hover-bg: #1f1f1f;
+  --text-color: #f8fafc;
+  --text-color-light: #cbd5e1;
+  --border-color: #334155;
+  --input-bg: #1e293b;
+  --hover-bg: #334155;
+  --bg-color: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   
   --success-color: #34d399;
   --warning-color: #fbbf24;
   --error-color: #f87171;
-  --shadow-color: rgba(0, 0, 0, 0.3);
+  --shadow-color: rgba(0, 0, 0, 0.5);
   --backdrop-blur: blur(20px);
   --accent-glow: rgba(34, 197, 94, 0.3);
+}
+
+/* Light theme updates */
+:root {
+  /* Font & Base */
+  --font-sans: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-logo: 'Nyxerin', sans-serif;
+  --border-radius: 0.5rem;
+  --border-radius-large: 0.75rem;
+  
+  /* Light Theme */
+  --primary-bg: #ffffff;
+  --secondary-bg: #f8f9fa;
+  --accent-color: #8b5cf6;
+  --text-color: #1f2937;
+  --text-color-light: #6b7280;
+  --border-color: #e5e7eb;
+  --input-bg: #ffffff;
+  --hover-bg: #f3f4f6;
+  --bg-color: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --backdrop-blur: blur(10px);
+  --accent-glow: rgba(139, 92, 246, 0.3);
+
+  /* Component Specific */
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #dee2e6;
+  --chat-bg: #ffffff;
+  --user-message-bg: #f1f3f5;
+  --user-message-text: #212529;
+  --agent-message-bg: #8b5cf6;
+  --agent-message-text: #ffffff;
 }
 
 /* Custom Scrollbar */
@@ -77,9 +113,9 @@ body {
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--primary-bg);
+  background: var(--bg-color);
   color: var(--text-color);
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background 0.3s ease, color 0.3s ease;
   overflow-x: hidden;
 }
 

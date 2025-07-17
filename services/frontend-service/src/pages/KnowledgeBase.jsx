@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import D3Graph from '../components/D3Graph';
-import Sidebar from '../components/Sidebar';
-import { FiX, FiDatabase, FiRefreshCw } from 'react-icons/fi';
+import Neo4jGraph from '../components/Neo4jGraph';
+import { 
+  FiSearch, FiGrid, FiList, FiZoomIn, FiZoomOut, FiRefreshCw, 
+  FiSettings, FiFilter, FiEye, FiLayers, FiDatabase 
+} from 'react-icons/fi';
 import './KnowledgeBase.css';
-import { KNOWLEDGE_GRAPH_ENDPOINT } from '../config';
+import mockGraphData from '../data/mockGraphData';
 
 const KnowledgeBase = () => {
   // Core state
@@ -15,44 +17,37 @@ const KnowledgeBase = () => {
   // UI state
   const [selectedNode, setSelectedNode] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedLabel, setSelectedLabel] = useState(null);
-  const [selectedRelType, setSelectedRelType] = useState(null);
+  const [viewType, setViewType] = useState('graph'); // 'graph', 'table', 'tree'
+  const [selectedNodeTypes, setSelectedNodeTypes] = useState(new Set());
+  const [selectedRelTypes, setSelectedRelTypes] = useState(new Set());
+  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
 
-  // Fetch initial graph data
-  const fetchInitialData = async () => {
+  // Load mock data
+  const loadMockData = () => {
     try {
       setIsLoading(true);
       setError(null);
-      console.log('🔍 Fetching initial graph data...');
+      console.log('🔍 Loading mock graph data from infraon_ontology.json...');
 
-      const response = await fetch(KNOWLEDGE_GRAPH_ENDPOINT);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('📊 Initial data received:', data);
-
-      // Transform data for D3
-      const transformedNodes = data.nodes.map(node => ({
+      // Transform mock data for the existing UI components
+      const transformedNodes = mockGraphData.allNodes.map(node => ({
         id: node.id,
-        name: node.name,
-        category: node.category,
-        description: node.properties.description || 
-                    node.properties.summary || 
-                    `${node.labels?.[0] || 'Node'} with ID ${node.id}`,
-        properties: node.properties,
-        labels: node.labels,
+        name: node.label,
+        category: node.group,
+        description: node.description || `${node.group} with ID ${node.id}`,
+        properties: node.properties || {},
+        labels: [node.group],
         radius: 30,
         isExpanded: false
       }));
 
-      const transformedEdges = data.relationships.map(edge => ({
+      const transformedEdges = mockGraphData.allRelationships.map(edge => ({
         id: edge.id,
         source: edge.source,
         target: edge.target,
         type: edge.type,
-        properties: edge.properties || {}
+        properties: {}
       }));
 
       const newGraphData = {
@@ -60,145 +55,119 @@ const KnowledgeBase = () => {
         edges: transformedEdges,
         relationships: transformedEdges
       };
-      
-      console.log(`🔄 Setting graph data: ${newGraphData.nodes.length} nodes, ${newGraphData.relationships.length} relationships`);
-      setGraphData(newGraphData);
 
-    } catch (error) {
-      console.error('❌ Error fetching initial data:', error);
-      setError(error.message);
-    } finally {
+      // Extract unique labels and relationship types
+      const uniqueLabels = [...new Set(transformedNodes.map(n => n.category))];
+      const uniqueRelTypes = [...new Set(transformedEdges.map(e => e.type))];
+
+      setGraphData(newGraphData);
+      setSchemaInfo({
+        labels: uniqueLabels,
+        relationshipTypes: uniqueRelTypes
+      });
+
+      // Initialize with all types selected
+      setSelectedNodeTypes(new Set(uniqueLabels));
+      setSelectedRelTypes(new Set(uniqueRelTypes));
+
+      setIsLoading(false);
+      console.log('✅ Mock data loaded successfully');
+      console.log(`📊 Loaded ${transformedNodes.length} nodes and ${transformedEdges.length} relationships`);
+      
+    } catch (err) {
+      console.error('❌ Error loading mock data:', err);
+      setError('Failed to load graph data');
       setIsLoading(false);
     }
   };
 
-  // Fetch schema information
-  const fetchSchemaInfo = async () => {
-    try {
-      console.log('🔍 Fetching schema information...');
-      
-      const response = await fetch('http://localhost:8001/api/schema-info');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('📊 Schema data received:', data);
-      setSchemaInfo(data);
-
-    } catch (error) {
-      console.error('❌ Error fetching schema info:', error);
-      // Use fallback schema info if API fails
-      setSchemaInfo({
-        labels: [
-          { name: 'APIEndpoint', count: 0 },
-          { name: 'Parameter', count: 0 },
-          { name: 'BusinessProcess', count: 0 },
-          { name: 'Keyword', count: 0 },
-          { name: 'Root', count: 0 },
-          { name: 'Path', count: 0 }
-        ],
-        relationshipTypes: [
-          { name: 'HAS_CHILD', count: 0 }
-        ]
-      });
-    }
-  };
-
-  // Initial data fetch
   useEffect(() => {
-    fetchInitialData();
-    fetchSchemaInfo();
+    loadMockData();
   }, []);
 
-  // Handle refresh
-  const handleRefresh = async () => {
-    await Promise.all([fetchInitialData(), fetchSchemaInfo()]);
-  };
+  // Filter data based on selections
+  const filteredData = useMemo(() => {
+    if (!graphData.nodes.length) return graphData;
 
-  // Filter graph data based on search and selections
-  const filteredGraphData = useMemo(() => {
-    let filteredNodes = graphData.nodes;
-    let filteredEdges = graphData.edges;
+    const filteredNodes = graphData.nodes.filter(node => 
+      selectedNodeTypes.has(node.category) &&
+      (!searchTerm || node.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
-    // Apply search filter
-    if (searchTerm) {
-      filteredNodes = filteredNodes.filter(node => {
-        const searchLower = searchTerm.toLowerCase();
-        return (
-          node.name.toLowerCase().includes(searchLower) ||
-          (node.description || '').toLowerCase().includes(searchLower) ||
-          (node.labels && node.labels.some(label => 
-            label.toLowerCase().includes(searchLower)
-          )) ||
-          Object.values(node.properties || {}).some(prop => 
-            String(prop).toLowerCase().includes(searchLower)
-          )
-        );
-      });
-    }
-
-    // Apply label filter
-    if (selectedLabel) {
-      filteredNodes = filteredNodes.filter(node => 
-        node.labels && node.labels.includes(selectedLabel)
-      );
-    }
-
-    // Apply relationship type filter
-    if (selectedRelType) {
-      filteredEdges = filteredEdges.filter(edge => edge.type === selectedRelType);
-      
-      // Only show nodes that have connections of the selected type
-      const connectedNodeIds = new Set();
-      filteredEdges.forEach(edge => {
-        connectedNodeIds.add(edge.source);
-        connectedNodeIds.add(edge.target);
-      });
-      
-      filteredNodes = filteredNodes.filter(node => connectedNodeIds.has(node.id));
-    } else {
-      // Filter edges to only include those between visible nodes
-      const nodeIds = new Set(filteredNodes.map(n => n.id));
-      filteredEdges = filteredEdges.filter(edge => 
-        nodeIds.has(edge.source) && nodeIds.has(edge.target)
-      );
-    }
+    const nodeIds = new Set(filteredNodes.map(n => n.id));
+    const filteredEdges = graphData.edges.filter(edge =>
+      selectedRelTypes.has(edge.type) &&
+      nodeIds.has(edge.source) &&
+      nodeIds.has(edge.target)
+    );
 
     return {
       nodes: filteredNodes,
-      edges: filteredEdges
+      edges: filteredEdges,
+      relationships: filteredEdges
     };
-  }, [graphData, searchTerm, selectedLabel, selectedRelType]);
+  }, [graphData, selectedNodeTypes, selectedRelTypes, searchTerm]);
 
-  // Handle node selection
-  const handleNodeSelect = (node) => {
-    setSelectedNode(node);
+  // Toggle functions
+  const toggleNodeType = (type) => {
+    const newSet = new Set(selectedNodeTypes);
+    if (newSet.has(type)) {
+      newSet.delete(type);
+    } else {
+      newSet.add(type);
+    }
+    setSelectedNodeTypes(newSet);
   };
 
-  // Render loading state
-  if (isLoading && graphData.nodes.length === 0) {
+  const toggleRelType = (type) => {
+    const newSet = new Set(selectedRelTypes);
+    if (newSet.has(type)) {
+      newSet.delete(type);
+    } else {
+      newSet.add(type);
+    }
+    setSelectedRelTypes(newSet);
+  };
+
+  // View type icons
+  const getViewIcon = (type) => {
+    switch (type) {
+      case 'graph': return <FiGrid />;
+      case 'table': return <FiList />;
+      case 'tree': return <FiLayers />;
+      default: return <FiGrid />;
+    }
+  };
+
+  // Node type colors
+  const getNodeTypeColor = (type) => {
+    const colors = {
+      'Module': '#8b5cf6',
+      'Feature': '#06b6d4', 
+      'Entity': '#10b981',
+      'Workflow': '#f59e0b'
+    };
+    return colors[type] || '#6b7280';
+  };
+
+  if (isLoading) {
     return (
       <div className="kb-container">
         <div className="kb-loading">
-          <div className="kb-loading-spinner"></div>
-          <p>Loading knowledge base...</p>
+          <FiRefreshCw className="loading-spinner" />
+          <span>Loading Knowledge Graph...</span>
         </div>
       </div>
     );
   }
 
-  // Render error state
-  if (error && graphData.nodes.length === 0) {
+  if (error) {
     return (
       <div className="kb-container">
-        <div className="kb-error-state">
-          <FiDatabase className="kb-error-icon-large" />
-          <h3>Cannot Connect to Database</h3>
-          <p>{error}</p>
-          <button className="kb-retry-btn" onClick={handleRefresh}>
-            <FiRefreshCw />
-            Retry Connection
+        <div className="kb-error">
+          <span>Error: {error}</span>
+          <button onClick={loadMockData} className="kb-retry-btn">
+            <FiRefreshCw /> Retry
           </button>
         </div>
       </div>
@@ -207,178 +176,215 @@ const KnowledgeBase = () => {
 
   return (
     <div className="kb-container">
-      {/* Sidebar */}
-      <Sidebar
-        schemaInfo={schemaInfo}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        selectedLabel={selectedLabel}
-        setSelectedLabel={setSelectedLabel}
-        selectedRelType={selectedRelType}
-        setSelectedRelType={setSelectedRelType}
-        onRefresh={handleRefresh}
-        isLoading={isLoading}
-      />
-
-      {/* Main Graph Area */}
-      <div className="kb-main-area">
-        <div className="kb-graph-header">
-          <div className="kb-graph-stats">
-            <div className="kb-stat-item">
-              <span className="kb-stat-value">{filteredGraphData.nodes.length}</span>
-              <span className="kb-stat-label">Visible Nodes</span>
-            </div>
-            <div className="kb-stat-item">
-              <span className="kb-stat-value">{filteredGraphData.edges.length}</span>
-              <span className="kb-stat-label">Visible Edges</span>
-            </div>
-            <div className="kb-stat-item">
-              <span className="kb-stat-value">{graphData.nodes.length}</span>
-              <span className="kb-stat-label">Total Nodes</span>
-            </div>
-            <div className="kb-stat-item">
-              <span className="kb-stat-value">{graphData.edges.length}</span>
-              <span className="kb-stat-label">Total Edges</span>
-            </div>
-          </div>
-          
-          {(searchTerm || selectedLabel || selectedRelType) && (
-            <div className="kb-active-filters">
-              <span>Active filters:</span>
-              {searchTerm && (
-                <span className="kb-filter-tag">
-                  Search: "{searchTerm}"
-                  <button onClick={() => setSearchTerm('')}>×</button>
-                </span>
-              )}
-              {selectedLabel && (
-                <span className="kb-filter-tag">
-                  Label: {selectedLabel}
-                  <button onClick={() => setSelectedLabel(null)}>×</button>
-                </span>
-              )}
-              {selectedRelType && (
-                <span className="kb-filter-tag">
-                  Type: {selectedRelType}
-                  <button onClick={() => setSelectedRelType(null)}>×</button>
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="kb-graph-container">
-          {filteredGraphData.nodes.length === 0 ? (
-            <div className="kb-empty-state">
-              <FiDatabase className="kb-empty-icon" />
-              <h3>No Data Available</h3>
-              <p>No nodes match your current filters or the database is empty.</p>
-              {(searchTerm || selectedLabel || selectedRelType) && (
-                <button 
-                  className="kb-clear-filters-btn"
-                  onClick={() => {
-                    setSearchTerm('');
-                    setSelectedLabel(null);
-                    setSelectedRelType(null);
-                  }}
-                >
-                  Clear All Filters
-                </button>
-              )}
-            </div>
-          ) : (
-            <D3Graph
-              graphData={filteredGraphData}
-              setGraphData={setGraphData}
-              onNodeSelect={handleNodeSelect}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* Node Details Panel */}
-      {selectedNode && (
-        <div className="kb-details-panel">
+      {/* Floating Left Panel */}
+      {isLeftPanelOpen && (
+        <div className="kb-floating-panel kb-left-panel">
           <div className="kb-panel-header">
-            <h3>Node Details</h3>
+            <h3><FiFilter /> Filters & Controls</h3>
             <button 
-              className="kb-close-btn"
-              onClick={() => setSelectedNode(null)}
+              className="kb-panel-close"
+              onClick={() => setIsLeftPanelOpen(false)}
             >
-              <FiX />
+              ×
             </button>
           </div>
 
-          <div className="kb-node-details">
-            <div className="kb-node-header">
-              <div 
-                className="kb-node-color" 
-                style={{ 
-                  backgroundColor: selectedNode.category === 'architecture' ? '#8b5cf6' :
-                                   selectedNode.category === 'apis' ? '#06b6d4' :
-                                   selectedNode.category === 'data' ? '#10b981' :
-                                   selectedNode.category === 'services' ? '#f59e0b' :
-                                   selectedNode.category === 'docs' ? '#ef4444' : '#6b7280'
-                }}
-              />
-              <div className="kb-node-info">
-                <h4>{selectedNode.name}</h4>
-                <span className="kb-node-category">{selectedNode.category}</span>
+          <div className="kb-panel-content">
+            {/* Search */}
+            <div className="kb-section">
+              <label className="kb-section-title">Search</label>
+              <div className="kb-search-container">
+                <FiSearch className="kb-search-icon" />
+                <input
+                  type="text"
+                  className="kb-search-input"
+                  placeholder="Search nodes..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
             </div>
 
-            <div className="kb-node-content">
-              <div className="kb-detail-section">
-                <h5>ID</h5>
-                <p>{selectedNode.id}</p>
+            {/* View Type */}
+            <div className="kb-section">
+              <label className="kb-section-title">View Type</label>
+              <div className="kb-view-types">
+                {['graph', 'table', 'tree'].map(type => (
+                  <button
+                    key={type}
+                    className={`kb-view-btn ${viewType === type ? 'active' : ''}`}
+                    onClick={() => setViewType(type)}
+                  >
+                    {getViewIcon(type)}
+                    <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                  </button>
+                ))}
               </div>
+            </div>
 
-              <div className="kb-detail-section">
-                <h5>Labels</h5>
-                <div className="kb-labels-list">
-                  {selectedNode.labels ? selectedNode.labels.map((label, idx) => (
-                    <span key={idx} className="kb-label-tag">{label}</span>
-                  )) : <span className="kb-no-data">No labels</span>}
-                </div>
-              </div>
-
-              <div className="kb-detail-section">
-                <h5>Description</h5>
-                <p>{selectedNode.description}</p>
-              </div>
-
-              <div className="kb-detail-section">
-                <h5>Properties</h5>
-                <div className="kb-properties-list">
-                  {selectedNode.properties && Object.keys(selectedNode.properties).length > 0 ? (
-                    Object.entries(selectedNode.properties).map(([key, value]) => (
-                      <div key={key} className="kb-property-item">
-                        <span className="kb-property-key">{key}:</span>
-                        <span className="kb-property-value">{String(value)}</span>
+            {/* Node Types */}
+            <div className="kb-section">
+              <label className="kb-section-title">Node Types</label>
+              <div className="kb-filter-list">
+                {schemaInfo.labels.map(label => (
+                  <div key={label} className="kb-filter-item">
+                    <label className="kb-checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={selectedNodeTypes.has(label)}
+                        onChange={() => toggleNodeType(label)}
+                      />
+                      <span className="kb-checkmark"></span>
+                      <div className="kb-node-type-info">
+                        <div 
+                          className="kb-node-color-indicator"
+                          style={{ backgroundColor: getNodeTypeColor(label) }}
+                        ></div>
+                        <span>{label}</span>
+                        <span className="kb-count">
+                          ({graphData.nodes.filter(n => n.category === label).length})
+                        </span>
                       </div>
-                    ))
-                  ) : (
-                    <span className="kb-no-data">No properties</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="kb-detail-section">
-                <h5>Connected Relationships</h5>
-                <div className="kb-relationships-list">
-                  {graphData.edges.filter(edge => 
-                    edge.source === selectedNode.id || edge.target === selectedNode.id
-                  ).map((edge, idx) => (
-                    <div key={idx} className="kb-relationship-tag">
-                      {edge.type}
-                      <span className="kb-relationship-direction">
-                        {edge.source === selectedNode.id ? '→' : '←'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                    </label>
+                  </div>
+                ))}
               </div>
             </div>
+
+            {/* Relationship Types */}
+            <div className="kb-section">
+              <label className="kb-section-title">Relationships</label>
+              <div className="kb-filter-list">
+                {schemaInfo.relationshipTypes.map(type => (
+                  <div key={type} className="kb-filter-item">
+                    <label className="kb-checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={selectedRelTypes.has(type)}
+                        onChange={() => toggleRelType(type)}
+                      />
+                      <span className="kb-checkmark"></span>
+                      <span>{type}</span>
+                      <span className="kb-count">
+                        ({graphData.edges.filter(e => e.type === type).length})
+                      </span>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Graph Area */}
+      <div className="kb-main-area">
+        {/* Top Toolbar */}
+        <div className="kb-toolbar">
+          <div className="kb-toolbar-left">
+            {!isLeftPanelOpen && (
+              <button 
+                className="kb-toolbar-btn"
+                onClick={() => setIsLeftPanelOpen(true)}
+              >
+                <FiFilter /> Filters
+              </button>
+            )}
+            <div className="kb-stats">
+              <span className="kb-stat">
+                <FiDatabase /> {filteredData.nodes.length} nodes
+              </span>
+              <span className="kb-stat">
+                {filteredData.edges.length} relationships
+              </span>
+            </div>
+          </div>
+          
+          <div className="kb-toolbar-right">
+            <button className="kb-toolbar-btn" onClick={loadMockData}>
+              <FiRefreshCw /> Refresh
+            </button>
+            <button className="kb-toolbar-btn">
+              <FiZoomIn />
+            </button>
+            <button className="kb-toolbar-btn">
+              <FiZoomOut />
+            </button>
+            {!isRightPanelOpen && (
+              <button 
+                className="kb-toolbar-btn"
+                onClick={() => setIsRightPanelOpen(true)}
+              >
+                <FiEye /> Details
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Graph Canvas */}
+        <div className="kb-graph-container">
+          <Neo4jGraph 
+            data={filteredData}
+            onNodeSelect={setSelectedNode}
+            viewType={viewType}
+          />
+        </div>
+      </div>
+
+      {/* Floating Right Panel */}
+      {isRightPanelOpen && (
+        <div className="kb-floating-panel kb-right-panel">
+          <div className="kb-panel-header">
+            <h3><FiEye /> Node Details</h3>
+            <button 
+              className="kb-panel-close"
+              onClick={() => setIsRightPanelOpen(false)}
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="kb-panel-content">
+            {selectedNode ? (
+              <div className="kb-node-details">
+                <div className="kb-node-header">
+                  <div 
+                    className="kb-node-color-indicator large"
+                    style={{ backgroundColor: getNodeTypeColor(selectedNode.category) }}
+                  ></div>
+                  <div>
+                    <h4>{selectedNode.name}</h4>
+                    <span className="kb-node-type">{selectedNode.category}</span>
+                  </div>
+                </div>
+
+                <div className="kb-node-property">
+                  <strong>ID:</strong> {selectedNode.id}
+                </div>
+
+                {selectedNode.description && (
+                  <div className="kb-node-property">
+                    <strong>Description:</strong> {selectedNode.description}
+                  </div>
+                )}
+
+                {Object.keys(selectedNode.properties || {}).length > 0 && (
+                  <div className="kb-section">
+                    <label className="kb-section-title">Properties</label>
+                    {Object.entries(selectedNode.properties).map(([key, value]) => (
+                      <div key={key} className="kb-node-property">
+                        <strong>{key}:</strong> {String(value)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="kb-no-selection">
+                <FiDatabase size={48} />
+                <p>Select a node to view details</p>
+              </div>
+            )}
           </div>
         </div>
       )}
