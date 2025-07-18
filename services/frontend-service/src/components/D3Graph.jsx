@@ -7,16 +7,26 @@ const D3Graph = ({ graphData, setGraphData, onNodeSelect }) => {
   const nodesRef = useRef([]);
   const linksRef = useRef([]);
 
-  // Color mapping for categories
+  // Color mapping for categories - matching unified color scheme
   const getCategoryColor = useCallback((category) => {
     const colorMap = {
-      architecture: '#8b5cf6',
-      apis: '#06b6d4', 
-      data: '#10b981',
-      services: '#f59e0b',
-      docs: '#ef4444'
+      'module': '#6366f1',     // Indigo - Core system modules
+      'feature': '#10b981',    // Emerald - Feature functionality  
+      'entity': '#f59e0b',     // Amber - Data entities
+      'workflow': '#ef4444',   // Red - Process workflows
+      'user': '#8b5cf6',       // Purple - User-related
+      'document': '#06b6d4',   // Cyan - Documentation
+      'system': '#84cc16',     // Lime - System components
+      'process': '#ec4899',    // Pink - Business processes
+      'data': '#3b82f6',       // Blue - Data objects
+      'api': '#f97316',        // Orange - API endpoints
+      // Legacy mappings for backward compatibility
+      'architecture': '#6366f1',
+      'apis': '#f97316', 
+      'services': '#84cc16',
+      'docs': '#06b6d4'
     };
-    return colorMap[category] || '#6b7280';
+    return colorMap[category.toLowerCase()] || '#6b7280';
   }, []);
 
   // Handle node expansion

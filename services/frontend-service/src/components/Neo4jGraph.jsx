@@ -1,23 +1,23 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import * as d3 from 'd3';
 import mockGraphData from '../data/mockGraphData';
 
 const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
   const svgRef = useRef(null);
   const simulationRef = useRef(null);
+  const zoomRef = useRef(null);
   
-  // State for currently visible nodes and relationships
   const [visibleGraph, setVisibleGraph] = useState({
     nodes: [],
     relationships: []
   });
 
-  // Track expanded nodes
   const [expandedNodes, setExpandedNodes] = useState(new Set());
+  const [selectedNodes, setSelectedNodes] = useState(new Set());
+  const [isDarkMode, setIsDarkMode] = useState(document.body.classList.contains('dark'));
 
-  // Initialize with root nodes on mount
+  // Initialize with root nodes
   useEffect(() => {
-    console.log('🌟 Initializing Neo4jGraph with root nodes');
     const rootNodes = mockGraphData.getRootNodes();
     setVisibleGraph({
       nodes: rootNodes,
@@ -25,22 +25,15 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
     });
   }, []);
 
-  // Update visible graph when external data changes (from filters)
+  // Update when external data changes
   useEffect(() => {
     if (data && data.nodes && data.nodes.length > 0) {
-      console.log('📊 Updating graph with filtered data:', data.nodes.length, 'nodes');
-      
-      // Transform external data to internal format
       const transformedNodes = data.nodes.map(node => ({
         id: node.id,
         label: node.name,
         group: node.category,
         description: node.description,
-        properties: node.properties,
-        x: node.x,
-        y: node.y,
-        vx: node.vx,
-        vy: node.vy
+        properties: node.properties
       }));
 
       const transformedRelationships = data.relationships?.map(rel => ({
@@ -58,28 +51,19 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
     }
   }, [data]);
 
-  // Node expansion handler
-  const handleNodeExpansion = useCallback((nodeId) => {
-    console.log('🔍 Expanding node:', nodeId);
-    
+  // Handle node expansion
+  const handleNodeExpansion = (nodeId) => {
     const newExpandedNodes = new Set(expandedNodes);
-    if (newExpandedNodes.has(nodeId)) {
-      console.log('📦 Node already expanded, collapsing');
-      return;
-    }
+    if (newExpandedNodes.has(nodeId)) return;
     
     newExpandedNodes.add(nodeId);
     setExpandedNodes(newExpandedNodes);
 
-    // Get children for the clicked node
     const children = mockGraphData.getChildNodes(nodeId);
     const childRelationships = mockGraphData.getRelationshipsForNode(nodeId);
     
-    console.log(`🌿 Found ${children.length} children and ${childRelationships.length} relationships`);
-
     if (children.length > 0) {
       setVisibleGraph(prev => {
-        // Avoid duplicates
         const existingNodeIds = new Set(prev.nodes.map(n => n.id));
         const newNodes = children.filter(child => !existingNodeIds.has(child.id));
         
@@ -92,98 +76,164 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
         };
       });
     }
-  }, [expandedNodes]);
-
-  // Color scheme for different node types
-  const getNodeColor = (group) => {
-    const colors = {
-      'Module': '#8b5cf6',
-      'Feature': '#06b6d4', 
-      'Entity': '#10b981',
-      'Workflow': '#f59e0b'
-    };
-    return colors[group] || '#6b7280';
   };
 
-  // Main D3 rendering effect
+  // Zoom functions using D3 zoom
+  const zoomIn = () => {
+    if (zoomRef.current && svgRef.current) {
+      const svg = d3.select(svgRef.current);
+      svg.transition().duration(300).call(
+        zoomRef.current.scaleBy, 1.3
+      );
+    }
+  };
+
+  const zoomOut = () => {
+    if (zoomRef.current && svgRef.current) {
+      const svg = d3.select(svgRef.current);
+      svg.transition().duration(300).call(
+        zoomRef.current.scaleBy, 1 / 1.3
+      );
+    }
+  };
+
+  const resetZoom = () => {
+    if (zoomRef.current && svgRef.current) {
+      const svg = d3.select(svgRef.current);
+      svg.transition().duration(500).call(
+        zoomRef.current.transform,
+        d3.zoomIdentity
+      );
+    }
+  };
+
+  const fitToScreen = () => {
+    if (!zoomRef.current || !svgRef.current || visibleGraph.nodes.length === 0) return;
+    
+    const svg = d3.select(svgRef.current);
+    const width = svgRef.current.clientWidth;
+    const height = svgRef.current.clientHeight;
+    const g = svg.select('g.main-group');
+    
+    try {
+      const bounds = g.node().getBBox();
+      if (bounds.width === 0 || bounds.height === 0) return;
+      
+      const widthScale = width / bounds.width;
+      const heightScale = height / bounds.height;
+      const scale = Math.min(widthScale, heightScale) * 0.8;
+      
+      const translate = [
+        (width - bounds.width * scale) / 2 - bounds.x * scale,
+        (height - bounds.height * scale) / 2 - bounds.y * scale
+      ];
+      
+      svg.transition().duration(750).call(
+        zoomRef.current.transform,
+        d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
+      );
+    } catch (error) {
+      console.warn('Could not fit to screen:', error);
+    }
+  };
+
+  // Handle custom events from toolbar buttons
   useEffect(() => {
-    if (!visibleGraph.nodes.length) return;
+    const handleFitToScreen = () => fitToScreen();
+    const handleResetZoom = () => resetZoom();
+
+    window.addEventListener('fitToScreen', handleFitToScreen);
+    window.addEventListener('resetZoom', handleResetZoom);
+    
+    return () => {
+      window.removeEventListener('fitToScreen', handleFitToScreen);
+      window.removeEventListener('resetZoom', handleResetZoom);
+    };
+  }, [visibleGraph.nodes.length]);
+
+  // Node colors - matching KnowledgeBase color scheme
+  const getNodeColor = (group) => {
+    const colors = {
+      'module': '#6366f1',     // Indigo - Core system modules
+      'feature': '#10b981',    // Emerald - Feature functionality  
+      'entity': '#f59e0b',     // Amber - Data entities
+      'workflow': '#ef4444',   // Red - Process workflows
+      'user': '#8b5cf6',       // Purple - User-related
+      'document': '#06b6d4',   // Cyan - Documentation
+      'system': '#84cc16',     // Lime - System components
+      'process': '#ec4899',    // Pink - Business processes
+      'data': '#3b82f6',       // Blue - Data objects
+      'api': '#f97316'         // Orange - API endpoints
+    };
+    return colors[group.toLowerCase()] || '#6b7280';
+  };
+
+  // Main render
+  useEffect(() => {
+    if (!svgRef.current || visibleGraph.nodes.length === 0) return;
 
     const svg = d3.select(svgRef.current);
     const width = svgRef.current.clientWidth;
     const height = svgRef.current.clientHeight;
 
-    console.log(`🎨 Rendering graph: ${visibleGraph.nodes.length} nodes, ${visibleGraph.relationships.length} relationships`);
-
     // Clear previous content
     svg.selectAll('*').remove();
 
-    // Create main group for zoom/pan
-    const g = svg.append('g').attr('class', 'main-group');
+    // Create main group for zoom/pan transforms
+    const g = svg.append('g')
+      .attr('class', 'main-group');
 
-    // Add responsive background
-    const defs = svg.append('defs');
-    
-    // Get current theme
-    const isDarkMode = document.body.classList.contains('dark');
-    
-    // Gradient definition
-    const gradient = defs.append('linearGradient')
-      .attr('id', 'background-gradient')
-      .attr('x1', '0%')
-      .attr('y1', '0%')
-      .attr('x2', '100%')
-      .attr('y2', '100%');
+    // Setup D3 zoom behavior
+    const zoom = d3.zoom()
+      .scaleExtent([0.1, 4])
+      .on('zoom', (event) => {
+        g.attr('transform', event.transform);
+      });
 
-    if (isDarkMode) {
-      gradient.append('stop')
-        .attr('offset', '0%')
-        .attr('stop-color', '#0f172a');
+    // Store zoom reference for external controls
+    zoomRef.current = zoom;
+
+    // Apply zoom behavior to SVG
+    svg.call(zoom);
+
+    // Better wheel event handling to prevent conflicts
+    svg.on('wheel', function(event) {
+      // Check if the event target or any parent has panel-related classes
+      const targetElement = event.target;
+      const isInPanel = targetElement.closest('.kb-floating-panel') || 
+                       targetElement.closest('.kb-panel-content') ||
+                       targetElement.closest('.kb-toolbar');
       
-      gradient.append('stop')
-        .attr('offset', '100%')
-        .attr('stop-color', '#1e293b');
-    } else {
-      gradient.append('stop')
-        .attr('offset', '0%')
-        .attr('stop-color', '#f8fafc');
+      if (isInPanel) {
+        event.stopPropagation();
+        return;
+      }
       
-      gradient.append('stop')
-        .attr('offset', '100%')
-        .attr('stop-color', '#e2e8f0');
-    }
+      // Allow normal zoom behavior for graph area - let D3 handle it
+      event.preventDefault();
+    });
 
-    // Background rectangle
-    svg.insert('rect', ':first-child')
-      .attr('width', '100%')
-      .attr('height', '100%')
-      .attr('fill', 'url(#background-gradient)');
-
-    // Arrow marker for relationships
-    const arrowColor = isDarkMode ? '#64748b' : '#94a3b8';
-    defs.append('marker')
+    // Add arrowhead marker
+    const arrowColor = isDarkMode ? '#475569' : '#cbd5e1';
+    svg.append('defs').append('marker')
       .attr('id', 'arrowhead')
-      .attr('viewBox', '-0 -5 10 10')
-      .attr('refX', 28)
+      .attr('viewBox', '0 -5 10 10')
+      .attr('refX', 25)
       .attr('refY', 0)
+      .attr('markerWidth', 6)
+      .attr('markerHeight', 6)
       .attr('orient', 'auto')
-      .attr('markerWidth', 8)
-      .attr('markerHeight', 8)
-      .attr('xoverflow', 'visible')
-      .append('svg:path')
-      .attr('d', 'M 0,-5 L 10 ,0 L 0,5')
+      .append('path')
+      .attr('d', 'M0,-5L10,0L0,5')
       .attr('fill', arrowColor)
       .attr('stroke', arrowColor);
 
-    // Create simulation
+    // Force simulation with tighter node spacing
     const simulation = d3.forceSimulation(visibleGraph.nodes)
-      .force('link', d3.forceLink(visibleGraph.relationships)
-        .id(d => d.id)
-        .distance(120)
-        .strength(0.6))
-      .force('charge', d3.forceManyBody().strength(-400))
+      .force('link', d3.forceLink(visibleGraph.relationships).id(d => d.id).distance(50))
+      .force('charge', d3.forceManyBody().strength(-150))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(35));
+      .force('collision', d3.forceCollide().radius(30))
 
     simulationRef.current = simulation;
 
@@ -191,13 +241,14 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
     const linkColor = isDarkMode ? '#475569' : '#cbd5e1';
     const links = g.append('g')
       .attr('class', 'links')
-      .selectAll('line')
+      .selectAll('path')
       .data(visibleGraph.relationships)
       .enter()
-      .append('line')
+      .append('path')
       .attr('stroke', linkColor)
       .attr('stroke-opacity', 0.8)
       .attr('stroke-width', 2)
+      .attr('fill', 'none')
       .attr('marker-end', 'url(#arrowhead)');
 
     // Create link labels
@@ -225,57 +276,71 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
       .enter()
       .append('g')
       .attr('class', 'node-group')
+      .attr('data-id', d => d.id)
       .style('cursor', 'pointer');
 
-    // Add solid circles for nodes
+    // Add circles
     const nodeStroke = isDarkMode ? '#1e293b' : '#ffffff';
     const nodeShadow = isDarkMode ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))' : 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))';
+    
     const circles = nodeGroups.append('circle')
       .attr('r', 20)
       .attr('fill', d => getNodeColor(d.group))
-      .attr('stroke', nodeStroke)
-      .attr('stroke-width', 3)
-      .style('filter', nodeShadow)
-      .style('transition', 'all 0.3s ease');
+      .attr('stroke', d => selectedNodes.has(d.id) ? '#22c55e' : nodeStroke)
+      .attr('stroke-width', d => selectedNodes.has(d.id) ? 4 : 3)
+      .style('filter', nodeShadow);
 
-    // Add node labels
+    // Add labels
     const textColor = isDarkMode ? '#f8fafc' : '#1f2937';
     const textShadow = isDarkMode ? '1px 1px 2px rgba(0,0,0,0.8)' : '1px 1px 2px rgba(255,255,255,0.8)';
     const labels = nodeGroups.append('text')
       .attr('class', 'node-label')
       .attr('text-anchor', 'middle')
       .attr('dy', '35px')
-      .attr('font-size', '12px')
-      .attr('font-weight', '600')
-      .attr('fill', textColor)
+      .attr('font-size', '13px')
+      .attr('font-weight', '700')
+      .attr('font-family', 'Inter, -apple-system, BlinkMacSystemFont, sans-serif')
+      .attr('fill', d => selectedNodes.has(d.id) ? '#22c55e' : textColor)
       .attr('pointer-events', 'none')
       .style('text-shadow', textShadow)
+      .style('letter-spacing', '0.025em')
       .text(d => {
-        const maxLength = 15;
+        const maxLength = 18;
         return d.label.length > maxLength ? 
           d.label.substring(0, maxLength) + '...' : 
           d.label;
       });
 
-    // Add expandable indicator for nodes with children
-    const indicatorStroke = isDarkMode ? '#1e293b' : '#ffffff';
+    // Add type labels
+    const typeLabels = nodeGroups.append('text')
+      .attr('class', 'node-type-label')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '50px')
+      .attr('font-size', '10px')
+      .attr('font-weight', '500')
+      .attr('font-family', 'Inter, -apple-system, BlinkMacSystemFont, sans-serif')
+      .attr('fill', isDarkMode ? '#94a3b8' : '#6b7280')
+      .attr('pointer-events', 'none')
+      .style('text-transform', 'uppercase')
+      .style('letter-spacing', '0.05em')
+      .text(d => d.group);
+
+    // Add expand indicators
     const indicators = nodeGroups.append('circle')
       .attr('class', 'expand-indicator')
       .attr('r', 6)
       .attr('cx', 15)
       .attr('cy', -15)
       .attr('fill', '#22c55e')
-      .attr('stroke', indicatorStroke)
+      .attr('stroke', nodeStroke)
       .attr('stroke-width', 2)
       .style('opacity', d => {
         const hasChildren = mockGraphData.getChildNodes(d.id).length > 0;
         const isExpanded = expandedNodes.has(d.id);
         return hasChildren && !isExpanded ? 1 : 0;
-      })
-      .style('transition', 'opacity 0.3s ease');
+      });
 
-    // Add plus sign to expand indicators
-    const plusColor = isDarkMode ? '#1e293b' : '#ffffff';
+    // Add plus signs
     nodeGroups.append('text')
       .attr('class', 'expand-text')
       .attr('x', 15)
@@ -283,7 +348,7 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
       .attr('text-anchor', 'middle')
       .attr('font-size', '10px')
       .attr('font-weight', 'bold')
-      .attr('fill', plusColor)
+      .attr('fill', nodeStroke)
       .attr('pointer-events', 'none')
       .style('opacity', d => {
         const hasChildren = mockGraphData.getChildNodes(d.id).length > 0;
@@ -292,83 +357,8 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
       })
       .text('+');
 
-    // Hover effects
-    const hoverShadow = isDarkMode ? 'drop-shadow(0 6px 12px rgba(0,0,0,0.4)) brightness(1.1)' : 'drop-shadow(0 6px 12px rgba(0,0,0,0.2)) brightness(1.1)';
-    nodeGroups
-      .on('mouseenter', function(event, d) {
-        d3.select(this).select('circle')
-          .transition()
-          .duration(200)
-          .attr('r', 24)
-          .style('filter', hoverShadow);
-        
-        d3.select(this).select('.node-label')
-          .transition()
-          .duration(200)
-          .attr('font-size', '13px');
-      })
-      .on('mouseleave', function(event, d) {
-        d3.select(this).select('circle')
-          .transition()
-          .duration(200)
-          .attr('r', 20)
-          .style('filter', nodeShadow);
-        
-        d3.select(this).select('.node-label')
-          .transition()
-          .duration(200)
-          .attr('font-size', '12px');
-      });
-
-    // Click handlers
-    let clickTimeout;
-    nodeGroups.on('click', function(event, d) {
-      event.stopPropagation();
-      
-      // Clear any existing timeout
-      if (clickTimeout) clearTimeout(clickTimeout);
-      
-      // Single click - select node
-      clickTimeout = setTimeout(() => {
-        console.log('🎯 Single click - selecting node:', d.label);
-        if (onNodeSelect) {
-          onNodeSelect({
-            id: d.id,
-            name: d.label,
-            category: d.group,
-            description: d.description,
-            properties: d.properties
-          });
-        }
-      }, 250);
-    });
-
-    // Double click handler for expansion
-    nodeGroups.on('dblclick', function(event, d) {
-      event.stopPropagation();
-      
-      // Clear single click timeout
-      if (clickTimeout) clearTimeout(clickTimeout);
-      
-      console.log('🚀 Double click - expanding node:', d.label);
-      
-      // Add visual feedback
-      const expandShadow = isDarkMode ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.5)) brightness(1.3)' : 'drop-shadow(0 8px 16px rgba(0,0,0,0.3)) brightness(1.3)';
-      d3.select(this).select('circle')
-        .transition()
-        .duration(300)
-        .attr('r', 28)
-        .style('filter', expandShadow)
-        .transition()
-        .duration(300)
-        .attr('r', 20)
-        .style('filter', nodeShadow);
-      
-      handleNodeExpansion(d.id);
-    });
-
-    // Drag behavior
-    const drag = d3.drag()
+    // Node drag behavior that works with zoom
+    const nodeDrag = d3.drag()
       .on('start', function(event, d) {
         if (!event.active) simulation.alphaTarget(0.3).restart();
         d.fx = d.x;
@@ -384,51 +374,53 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
         d.fy = null;
       });
 
-    nodeGroups.call(drag);
-
-    // Zoom behavior
-    const zoom = d3.zoom()
-      .scaleExtent([0.3, 3])
-      .on('zoom', function(event) {
-        g.attr('transform', event.transform);
+    // Click handlers
+    let clickTimeout;
+    nodeGroups
+      .call(nodeDrag)
+      .on('click', function(event, d) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        if (clickTimeout) clearTimeout(clickTimeout);
+        
+        clickTimeout = setTimeout(() => {
+          const newSelectedNodes = new Set(selectedNodes);
+          if (newSelectedNodes.has(d.id)) {
+            newSelectedNodes.delete(d.id);
+          } else {
+            newSelectedNodes.add(d.id);
+          }
+          setSelectedNodes(newSelectedNodes);
+          
+          if (onNodeSelect) {
+            onNodeSelect(d);
+          }
+        }, 200);
+      })
+      .on('dblclick', function(event, d) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        if (clickTimeout) clearTimeout(clickTimeout);
+        handleNodeExpansion(d.id);
       });
 
-    svg.call(zoom);
+    // Background click to deselect
+    svg.on('click', function(event) {
+      if (event.target === this) {
+        setSelectedNodes(new Set());
+      }
+    });
 
-    // Update positions on tick
+    // Simulation tick
     simulation.on('tick', () => {
-      links
-        .attr('x1', d => d.source.x)
-        .attr('y1', d => d.source.y)
-        .attr('x2', d => d.target.x)
-        .attr('y2', d => d.target.y);
-
+      links.attr('d', d => `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`);
       linkLabels
         .attr('x', d => (d.source.x + d.target.x) / 2)
         .attr('y', d => (d.source.y + d.target.y) / 2);
-
-      nodeGroups
-        .attr('transform', d => `translate(${d.x},${d.y})`);
+      nodeGroups.attr('transform', d => `translate(${d.x},${d.y})`);
     });
-
-    // Set initial zoom to fit content
-    setTimeout(() => {
-      const bounds = g.node().getBBox();
-      const fullWidth = width;
-      const fullHeight = height;
-      const widthScale = fullWidth / bounds.width;
-      const heightScale = fullHeight / bounds.height;
-      const scale = Math.min(widthScale, heightScale) * 0.8;
-      
-      const translate = [
-        (fullWidth - bounds.width * scale) / 2 - bounds.x * scale,
-        (fullHeight - bounds.height * scale) / 2 - bounds.y * scale
-      ];
-
-      svg.transition()
-        .duration(750)
-        .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
-    }, 500);
 
     // Cleanup
     return () => {
@@ -436,27 +428,10 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
         simulationRef.current.stop();
       }
     };
-
-  }, [visibleGraph, expandedNodes, onNodeSelect, handleNodeExpansion]);
-
-  // Handle view type changes
-  if (viewType !== 'graph') {
-    return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        color: 'var(--text-color-light)',
-        fontSize: '1.1rem'
-      }}>
-        {viewType === 'table' ? '📊 Table View Coming Soon' : '🌳 Tree View Coming Soon'}
-      </div>
-    );
-  }
+  }, [visibleGraph, selectedNodes, expandedNodes, isDarkMode, onNodeSelect]);
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <svg
         ref={svgRef}
         style={{
@@ -467,7 +442,10 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
         }}
       />
       
-      {/* Loading overlay */}
+
+      
+
+      
       {visibleGraph.nodes.length === 0 && (
         <div style={{
           position: 'absolute',

@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+@import url('https://fonts.cdnfonts.com/css/sf-pro-display');
+@import url('https://fonts.cdnfonts.com/css/sf-mono');
 
 @font-face {
   font-family: 'Nyxerin';
@@ -7,7 +9,8 @@
 
 :root {
   /* Font & Base */
-  --font-sans: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-sans: 'SF Pro Display', 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
   --font-logo: 'Nyxerin', sans-serif;
   --border-radius: 0.5rem;
   --border-radius-large: 0.75rem;
@@ -61,7 +64,8 @@ body.dark {
 /* Light theme updates */
 :root {
   /* Font & Base */
-  --font-sans: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-sans: 'SF Pro Display', 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
   --font-logo: 'Nyxerin', sans-serif;
   --border-radius: 0.5rem;
   --border-radius-large: 0.75rem;
@@ -116,17 +120,18 @@ body {
   background: var(--bg-color);
   color: var(--text-color);
   transition: background 0.3s ease, color 0.3s ease;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 #root, .app-container {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* --- Main Layout --- */
 .app-container {
   display: flex;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 /* --- Clean Search Panel --- */
@@ -1415,13 +1420,13 @@ body {
   flex-direction: column;
   min-width: 0;
   height: 100vh;
-  overflow-y: auto; /* Allow scrolling on the main view */
+  overflow: hidden; /* Prevent scrolling on the main view */
 }
 
 .main-content {
   flex-grow: 1;
   padding: 0; /* Remove padding, as workflow-page has its own */
-  overflow-y: auto; /* Allow scrolling on the content area */
+  overflow: hidden; /* Prevent scrolling on the content area */
   position: relative; /* Needed for some children positioning */
 }
 

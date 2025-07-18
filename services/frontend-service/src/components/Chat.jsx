@@ -142,30 +142,6 @@ const Chat = ({
 
   return (
     <div className="wf-chat-panel">
-      {/* Minimal Header */}
-      <div className="wf-chat-header">
-        <div className="wf-chat-title">
-          <FiMessageCircle className="wf-title-icon" />
-          <span>AI Assistant</span>
-          <div className={`wf-status-dot ${isThinking ? 'thinking' : 'ready'}`}></div>
-        </div>
-        <div className="wf-chat-actions">
-          <button 
-            className="wf-icon-btn" 
-            onClick={() => setShowActions(!showActions)}
-            title="More actions"
-          >
-            <FiMoreHorizontal />
-          </button>
-          {showActions && (
-            <div className="wf-actions-dropdown">
-              <button onClick={clearChat}>Clear Chat</button>
-              <button onClick={exportChat}>Export</button>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Messages Section */}
       <div className="wf-messages-section">
         <div className="wf-messages-container">

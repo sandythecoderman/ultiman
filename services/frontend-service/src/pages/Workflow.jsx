@@ -7,7 +7,6 @@ import ReactFlow, {
   useEdgesState,
   Controls,
   Background,
-  MiniMap,
   applyNodeChanges,
   applyEdgeChanges,
 } from 'reactflow';
@@ -28,7 +27,8 @@ import {
   FiSettings, 
   FiPlay,
   FiX,
-  FiGrid
+  FiGrid,
+  FiMoreHorizontal
 } from 'react-icons/fi';
 
 const nodeTypes = {
@@ -168,6 +168,7 @@ const Workflow = () => {
   const [messages, setMessages] = useState([]);
   const [presentationMode, setPresentationMode] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   const [contextMenu, setContextMenu] = useState({
     visible: false,
     x: 0,
@@ -710,19 +711,53 @@ const Workflow = () => {
   }
 
   return (
-    <div className="wf-page">
+    <div className="wf-container">
       {/* Left Panel - Chat */}
-      <div className="wf-left-panel">
-        <Chat
-          messages={messages}
-          onMessagesChange={setMessages}
-          onSendMessage={handleSendMessage}
-          placeholder="Describe the workflow you want to create..."
-        />
+      <div className="wf-floating-panel wf-left-panel">
+        <div className="wf-panel-header">
+          <h3><FiSettings /> AI Assistant</h3>
+          <div className="wf-panel-actions">
+            <button 
+              className="wf-panel-close"
+              onClick={() => setShowActions(!showActions)}
+              title="More actions"
+            >
+              <FiMoreHorizontal />
+            </button>
+            {showActions && (
+              <div className="wf-actions-dropdown">
+                <button onClick={() => setMessages([])}>Clear Chat</button>
+                <button onClick={() => {
+                  const chatData = {
+                    timestamp: new Date().toISOString(),
+                    messageCount: messages.length,
+                    messages: messages
+                  };
+                  const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `workflow-chat-${Date.now()}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}>Export</button>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="wf-panel-content">
+          <Chat
+            messages={messages}
+            onMessagesChange={setMessages}
+            onSendMessage={handleSendMessage}
+            placeholder="Describe the workflow you want to create..."
+          />
+        </div>
       </div>
 
       {/* Center Graph Area */}
-      <div className="wf-graph-container">
+      <div className="wf-main-area">
+        <div className="wf-graph-container">
         {/* Graph toolbar */}
         <div className="wf-graph-toolbar">
           <div className="wf-graph-info">
@@ -763,35 +798,116 @@ const Workflow = () => {
             >
               <Background />
               <Controls />
-              <MiniMap nodeStrokeWidth={3} zoomable pannable />
             </ReactFlow>
           )}
         </ReactFlowProvider>
+        </div>
       </div>
 
       {/* Right Panel - Node Properties */}
-      <div className="wf-right-panel">
-        {analysis ? (
-          <AnalysisResults analysis={analysis} onClear={() => setAnalysis(null)} />
-        ) : selectedNode ? (
-          <NodeProperties node={selectedNode} onNodeDataChange={handleNodeDataChange} />
-        ) : (
-          <div className="wf-placeholder">
-            <div className="wf-placeholder-content">
-              <h3>Agent Workflow Demo</h3>
-              <p>Select a node to view its properties and configuration.</p>
-              <p>Use the chat panel to interact with the AI agent and generate workflow steps.</p>
-              <div className="wf-shortcuts">
-                <h4>Quick Actions:</h4>
-                <p><span>Create nodes</span><kbd>1-4</kbd></p>
-                <p><span>Templates</span><kbd>Ctrl+T</kbd></p>
-                <p><span>Auto-layout</span><kbd>Shift+L</kbd></p>
-                <p><span>Presentation mode</span><kbd>Ctrl+F</kbd></p>
-                <p><span>Right-click menu</span><kbd>Right-click</kbd></p>
+      <div className="wf-floating-panel wf-right-panel">
+        <div className="wf-panel-header">
+          <h3><FiPlay /> Workflow Builder</h3>
+          <button 
+            className="wf-panel-close"
+            onClick={() => {}}
+            title="Collapse panel"
+          >
+            <FiMinimize />
+          </button>
+        </div>
+        <div className="wf-panel-content">
+          {analysis ? (
+            <AnalysisResults analysis={analysis} onClear={() => setAnalysis(null)} />
+          ) : selectedNode ? (
+            <NodeProperties node={selectedNode} onNodeDataChange={handleNodeDataChange} />
+          ) : (
+            <div className="wf-no-selection">
+              <div className="wf-no-selection-icon">
+                <FiPlay size={48} />
+              </div>
+              <h4>Agent Workflow Demo</h4>
+              <p className="wf-no-selection-description">
+                Select any node from the workflow to view its properties and configuration options.
+              </p>
+              
+              <div className="wf-feature-preview">
+                <h5>What you'll see:</h5>
+                <div className="wf-preview-list">
+                  <div className="wf-preview-item">
+                    <FiSettings size={16} />
+                    <div className="wf-preview-content">
+                      <strong>Node Properties</strong>
+                      <span>Configuration and settings</span>
+                    </div>
+                  </div>
+                  <div className="wf-preview-item">
+                    <FiPlay size={16} />
+                    <div className="wf-preview-content">
+                      <strong>Execution Details</strong>
+                      <span>Runtime parameters and outputs</span>
+                    </div>
+                  </div>
+                  <div className="wf-preview-item">
+                    <FiGrid size={16} />
+                    <div className="wf-preview-content">
+                      <strong>Connection Info</strong>
+                      <span>Input/output connections</span>
+                    </div>
+                  </div>
+                  <div className="wf-preview-item">
+                    <FiMaximize size={16} />
+                    <div className="wf-preview-content">
+                      <strong>Quick Actions</strong>
+                      <span>Edit, duplicate, and manage nodes</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="wf-interaction-tips">
+                <div className="wf-tip-item">
+                  <FiSettings size={16} />
+                  <div className="wf-tip-content">
+                    <strong>Click:</strong>
+                    <span>Select and configure nodes</span>
+                  </div>
+                </div>
+                <div className="wf-tip-item">
+                  <FiPlay size={16} />
+                  <div className="wf-tip-content">
+                    <strong>Chat:</strong>
+                    <span>AI-powered workflow generation</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="wf-detail-section">
+                <h5 className="wf-section-title">
+                  <FiGrid size={16} />
+                  Quick Actions
+                </h5>
+                <div className="wf-shortcuts-grid">
+                  <div className="wf-shortcut-item">
+                    <span>Create nodes</span><kbd>1-4</kbd>
+                  </div>
+                  <div className="wf-shortcut-item">
+                    <span>Templates</span><kbd>Ctrl+T</kbd>
+                  </div>
+                  <div className="wf-shortcut-item">
+                    <span>Auto-layout</span><kbd>Shift+L</kbd>
+                  </div>
+                  <div className="wf-shortcut-item">
+                    <span>Presentation</span><kbd>Ctrl+F</kbd>
+                  </div>
+                  <div className="wf-shortcut-item">
+                    <span>Context menu</span><kbd>Right-click</kbd>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Context Menu */}
