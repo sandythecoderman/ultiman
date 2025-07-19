@@ -7,8 +7,6 @@ import ReactFlow, {
   useEdgesState,
   Controls,
   Background,
-  applyNodeChanges,
-  applyEdgeChanges,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import './Workflow.css';
@@ -36,137 +34,41 @@ import {
 } from 'react-icons/fi';
 
 const nodeTypes = {
-  start: CustomNode,
-  execute: CustomNode,
-  process: CustomNode,
-  end: CustomNode,
-  default: CustomNode,
+  default: FallbackNode,
+};
+
+// Temporary fallback node type for debugging
+const FallbackNode = ({ data }) => {
+  console.log('FallbackNode rendering with data:', data);
+  return (
+    <div style={{ 
+      background: '#fff', 
+      border: '1px solid #ccc', 
+      padding: '10px', 
+      borderRadius: '4px',
+      minWidth: '100px'
+    }}>
+      <div>Type: {data?.type || 'unknown'}</div>
+      <div>Label: {data?.label || 'No label'}</div>
+      <div>Status: {data?.status || 'unknown'}</div>
+    </div>
+  );
 };
 
 const Workflow = () => {
-  const [nodes, setNodes] = useState([
+  // Add debugging to see what's happening
+  console.log('Workflow component rendering...');
+  
+  // Minimal test nodes
+  const [nodes, setNodes, onNodesChange] = useNodesState([
     {
-      id: 'start-1',
-      type: 'start',
+      id: '1',
+      type: 'default',
       position: { x: 100, y: 100 },
-      data: { 
-        label: 'Start Process',
-        description: 'Initialize the workflow',
-        status: 'completed'
-      }
-    },
-    {
-      id: 'process-1',
-      type: 'process',
-      position: { x: 300, y: 100 },
-      data: { 
-        label: 'Data Validation',
-        description: 'Validate incoming data format',
-        status: 'running'
-      }
-    },
-    {
-      id: 'execute-1',
-      type: 'execute',
-      position: { x: 500, y: 100 },
-      data: { 
-        label: 'API Call',
-        description: 'Execute external API request',
-        status: 'pending'
-      }
-    },
-    {
-      id: 'process-2',
-      type: 'process',
-      position: { x: 200, y: 250 },
-      data: { 
-        label: 'Error Handling',
-        description: 'Handle validation errors',
-        status: 'idle'
-      }
-    },
-    {
-      id: 'process-3',
-      type: 'process',
-      position: { x: 400, y: 250 },
-      data: { 
-        label: 'Data Transform',
-        description: 'Transform API response data',
-        status: 'idle'
-      }
-    },
-    {
-      id: 'execute-2',
-      type: 'execute',
-      position: { x: 600, y: 250 },
-      data: { 
-        label: 'Save Results',
-        description: 'Store processed data',
-        status: 'idle'
-      }
-    },
-    {
-      id: 'end-1',
-      type: 'end',
-      position: { x: 400, y: 400 },
-      data: { 
-        label: 'Complete',
-        description: 'Workflow completed successfully',
-        status: 'idle'
-      }
+      data: { label: 'Test Node' }
     }
   ]);
-  const [edges, setEdges] = useState([
-    {
-      id: 'e1',
-      source: 'start-1',
-      target: 'process-1',
-      label: 'begin',
-      type: 'smoothstep'
-    },
-    {
-      id: 'e2',
-      source: 'process-1',
-      target: 'execute-1',
-      label: 'valid',
-      type: 'smoothstep'
-    },
-    {
-      id: 'e3',
-      source: 'process-1',
-      target: 'process-2',
-      label: 'error',
-      type: 'smoothstep'
-    },
-    {
-      id: 'e4',
-      source: 'execute-1',
-      target: 'process-3',
-      label: 'success',
-      type: 'smoothstep'
-    },
-    {
-      id: 'e5',
-      source: 'process-3',
-      target: 'execute-2',
-      label: 'transform',
-      type: 'smoothstep'
-    },
-    {
-      id: 'e6',
-      source: 'execute-2',
-      target: 'end-1',
-      label: 'saved',
-      type: 'smoothstep'
-    },
-    {
-      id: 'e7',
-      source: 'process-2',
-      target: 'end-1',
-      label: 'handled',
-      type: 'smoothstep'
-    }
-  ]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -186,15 +88,6 @@ const Workflow = () => {
   const reactFlowWrapper = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
-
-  const onNodesChange = useCallback(
-    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
-    [],
-  );
-  const onEdgesChange = useCallback(
-    (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
-    [],
-  );
 
   const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), []);
 
@@ -656,7 +549,9 @@ const Workflow = () => {
                 onPaneContextMenu={onPaneContextMenu}
                 onNodeContextMenu={onNodeContextMenu}
                 fitView
-                nodeTypes={nodeTypes}
+                onError={(error) => {
+                  console.error('ReactFlow presentation error:', error);
+                }}
               >
                 <Background />
                 <Controls />
@@ -783,7 +678,9 @@ const Workflow = () => {
               onPaneContextMenu={onPaneContextMenu}
               onNodeContextMenu={onNodeContextMenu}
               fitView
-              nodeTypes={nodeTypes}
+              onError={(error) => {
+                console.error('ReactFlow error:', error);
+              }}
             >
               <Background />
               <Controls />

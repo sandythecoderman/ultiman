@@ -3,6 +3,9 @@ import { Handle, Position } from 'reactflow';
 import './CustomNode.css';
 
 const CustomNode = ({ data, selected }) => {
+  // Add debugging
+  console.log('CustomNode rendering with data:', data);
+  
   const getNodeTypeColor = (type) => {
     switch (type) {
       case 'start':
@@ -48,12 +51,20 @@ const CustomNode = ({ data, selected }) => {
     }
   };
 
-  const nodeColor = getNodeTypeColor(data.type);
-  const statusColor = getStatusColor(data.status);
+  // Add null checks and default values
+  const nodeType = data?.type || 'default';
+  const nodeStatus = data?.status || 'idle';
+  const nodeLabel = data?.label || 'Node';
+  const nodeDescription = data?.description || '';
+
+  console.log('Processed node data:', { nodeType, nodeStatus, nodeLabel, nodeDescription });
+
+  const nodeColor = getNodeTypeColor(nodeType);
+  const statusColor = getStatusColor(nodeStatus);
 
   return (
     <div 
-      className={`custom-node ${selected ? 'selected' : ''} ${data.status}`}
+      className={`custom-node ${selected ? 'selected' : ''} ${nodeStatus}`}
       style={{ 
         borderColor: nodeColor,
         boxShadow: selected ? `0 0 0 2px ${nodeColor}40` : 'none'
@@ -68,21 +79,21 @@ const CustomNode = ({ data, selected }) => {
       
       <div className="node-header">
         <div className="node-type-indicator" style={{ backgroundColor: nodeColor }}>
-          {data.type.charAt(0).toUpperCase()}
+          {nodeType.charAt(0).toUpperCase()}
         </div>
         <div className="node-status" style={{ color: statusColor }}>
-          {getStatusIcon(data.status)}
+          {getStatusIcon(nodeStatus)}
         </div>
       </div>
       
       <div className="node-content">
-        <div className="node-label">{data.label}</div>
-        {data.description && (
-          <div className="node-description">{data.description}</div>
+        <div className="node-label">{nodeLabel}</div>
+        {nodeDescription && (
+          <div className="node-description">{nodeDescription}</div>
         )}
       </div>
 
-      {data.status === 'running' && (
+      {nodeStatus === 'running' && (
         <div className="node-progress">
           <div className="progress-bar">
             <div className="progress-fill" style={{ backgroundColor: statusColor }}></div>
