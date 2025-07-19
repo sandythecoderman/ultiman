@@ -15,6 +15,7 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
   const [expandedNodes, setExpandedNodes] = useState(new Set());
   const [selectedNodes, setSelectedNodes] = useState(new Set());
   const [isDarkMode, setIsDarkMode] = useState(document.body.classList.contains('dark'));
+  const [viewport, setViewport] = useState({ x: 0, y: 0, scale: 1 });
 
   // Initialize with root nodes
   useEffect(() => {
@@ -78,7 +79,7 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
     }
   };
 
-  // Zoom functions using D3 zoom
+  // Enhanced zoom functions for infinite canvas
   const zoomIn = () => {
     if (zoomRef.current && svgRef.current) {
       const svg = d3.select(svgRef.current);
@@ -168,7 +169,38 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
     return colors[group.toLowerCase()] || '#6b7280';
   };
 
-  // Main render
+  // Create infinite background grid
+  const createBackgroundGrid = (svg, width, height) => {
+    const defs = svg.append('defs');
+    
+    // Create grid pattern
+    const gridPattern = defs.append('pattern')
+      .attr('id', 'grid')
+      .attr('width', 50)
+      .attr('height', 50)
+      .attr('patternUnits', 'userSpaceOnUse');
+
+    const gridColor = isDarkMode ? '#1e293b' : '#f1f5f9';
+    const gridOpacity = isDarkMode ? 0.3 : 0.5;
+
+    gridPattern.append('path')
+      .attr('d', 'M 50 0 L 0 0 0 50')
+      .attr('fill', 'none')
+      .attr('stroke', gridColor)
+      .attr('stroke-width', 1)
+      .attr('opacity', gridOpacity);
+
+    // Add background rectangle with grid pattern - ensure it's added before main group
+    svg.append('rect')
+      .attr('class', 'grid-background')
+      .attr('width', '100%')
+      .attr('height', '100%')
+      .attr('fill', 'url(#grid)')
+      .style('pointer-events', 'none')
+      .style('z-index', '-1');
+  };
+
+  // Main render with infinite canvas
   useEffect(() => {
     if (!svgRef.current || visibleGraph.nodes.length === 0) return;
 
@@ -179,15 +211,23 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
     // Clear previous content
     svg.selectAll('*').remove();
 
+    // Create background grid
+    createBackgroundGrid(svg, width, height);
+
     // Create main group for zoom/pan transforms
     const g = svg.append('g')
       .attr('class', 'main-group');
 
-    // Setup D3 zoom behavior
+    // Enhanced D3 zoom behavior for infinite canvas
     const zoom = d3.zoom()
-      .scaleExtent([0.1, 4])
+      .scaleExtent([0.05, 10]) // Allow much more zoom out for infinite feel
       .on('zoom', (event) => {
         g.attr('transform', event.transform);
+        setViewport({
+          x: event.transform.x,
+          y: event.transform.y,
+          scale: event.transform.k
+        });
       });
 
     // Store zoom reference for external controls
@@ -228,12 +268,12 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
       .attr('fill', arrowColor)
       .attr('stroke', arrowColor);
 
-    // Force simulation with tighter node spacing
+    // Force simulation WITHOUT center force for infinite canvas
     const simulation = d3.forceSimulation(visibleGraph.nodes)
-      .force('link', d3.forceLink(visibleGraph.relationships).id(d => d.id).distance(50))
-      .force('charge', d3.forceManyBody().strength(-150))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(30))
+      .force('link', d3.forceLink(visibleGraph.relationships).id(d => d.id).distance(80))
+      .force('charge', d3.forceManyBody().strength(-200))
+      // Remove center force to allow infinite positioning
+      .force('collision', d3.forceCollide().radius(35));
 
     simulationRef.current = simulation;
 
@@ -357,7 +397,7 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
       })
       .text('+');
 
-    // Node drag behavior that works with zoom
+    // Enhanced node drag behavior for infinite canvas
     const nodeDrag = d3.drag()
       .on('start', function(event, d) {
         if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -442,9 +482,99 @@ const Neo4jGraph = ({ data, onNodeSelect, viewType = 'graph' }) => {
         }}
       />
       
-
+      {/* Infinite Canvas Controls */}
+      <div style={{
+        position: 'absolute',
+        bottom: '1rem',
+        right: '1rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem',
+        zIndex: 1000
+      }}>
+        <button
+          onClick={zoomIn}
+          style={{
+            background: 'var(--primary-bg)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            padding: '0.5rem',
+            cursor: 'pointer',
+            color: 'var(--text-color)',
+            fontSize: '1.2rem',
+            width: '40px',
+            height: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}
+          title="Zoom In"
+        >
+          +
+        </button>
+        <button
+          onClick={zoomOut}
+          style={{
+            background: 'var(--primary-bg)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            padding: '0.5rem',
+            cursor: 'pointer',
+            color: 'var(--text-color)',
+            fontSize: '1.2rem',
+            width: '40px',
+            height: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}
+          title="Zoom Out"
+        >
+          −
+        </button>
+        <button
+          onClick={resetZoom}
+          style={{
+            background: 'var(--primary-bg)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            padding: '0.5rem',
+            cursor: 'pointer',
+            color: 'var(--text-color)',
+            fontSize: '0.8rem',
+            width: '40px',
+            height: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}
+          title="Reset View"
+        >
+          ⌂
+        </button>
+      </div>
       
-
+      {/* Viewport Info */}
+      <div style={{
+        position: 'absolute',
+        bottom: '1rem',
+        left: '1rem',
+        background: 'var(--primary-bg)',
+        border: '1px solid var(--border-color)',
+        borderRadius: '8px',
+        padding: '0.5rem 0.75rem',
+        fontSize: '0.75rem',
+        color: 'var(--text-color-light)',
+        zIndex: 1000,
+        fontFamily: 'monospace'
+      }}>
+        <div>Zoom: {Math.round(viewport.scale * 100)}%</div>
+        <div>Pan: ({Math.round(viewport.x)}, {Math.round(viewport.y)})</div>
+        <div>Nodes: {visibleGraph.nodes.length}</div>
+      </div>
       
       {visibleGraph.nodes.length === 0 && (
         <div style={{

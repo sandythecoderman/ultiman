@@ -808,13 +808,6 @@ const Workflow = () => {
       <div className="wf-floating-panel wf-right-panel">
         <div className="wf-panel-header">
           <h3><FiPlay /> Workflow Builder</h3>
-          <button 
-            className="wf-panel-close"
-            onClick={() => {}}
-            title="Collapse panel"
-          >
-            <FiMinimize />
-          </button>
         </div>
         <div className="wf-panel-content">
           {analysis ? (
