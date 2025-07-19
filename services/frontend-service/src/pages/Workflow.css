@@ -980,3 +980,416 @@
   color: var(--accent-color);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 } 
+
+/* Workflow Name Input */
+.workflow-name-input {
+  background: transparent;
+  border: none;
+  color: var(--text-color);
+  font-size: 1.125rem;
+  font-weight: 600;
+  font-family: 'Montserrat', sans-serif;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  min-width: 200px;
+}
+
+.workflow-name-input:focus {
+  outline: none;
+  background: var(--input-bg);
+  border: 1px solid var(--accent-color);
+}
+
+.workflow-name-input:hover {
+  background: var(--hover-bg);
+}
+
+/* Execution Status */
+.execution-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--accent-color);
+  font-size: 0.875rem;
+  font-weight: 500;
+  animation: pulse 2s infinite;
+}
+
+.execution-status .spinning {
+  animation: spin 1s linear infinite;
+}
+
+/* Execute Button */
+.wf-graph-actions button.executing {
+  background: var(--accent-color);
+  color: white;
+  animation: pulse 2s infinite;
+}
+
+.wf-graph-actions button.executing:hover {
+  background: var(--accent-color);
+  transform: none;
+}
+
+.wf-graph-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.wf-graph-actions button:disabled:hover {
+  transform: none;
+  background: var(--input-bg);
+  border-color: var(--border-color);
+}
+
+/* Enhanced Graph Info */
+.wf-graph-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.wf-graph-info span {
+  font-size: 0.875rem;
+  color: var(--text-color-light);
+  font-weight: 500;
+}
+
+/* Improved Graph Actions */
+.wf-graph-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.wf-graph-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-color);
+  background: var(--input-bg);
+  color: var(--text-color-light);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+}
+
+.wf-graph-actions button:hover {
+  background: var(--hover-bg);
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+  transform: translateY(-1px);
+}
+
+.wf-graph-actions button:first-child {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+.wf-graph-actions button:first-child:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+/* Enhanced Presentation Mode */
+.wf-presentation-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: var(--primary-bg);
+  border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.wf-presentation-title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.wf-presentation-title h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-color);
+  font-family: 'Montserrat', sans-serif;
+}
+
+.wf-presentation-title span {
+  font-size: 0.875rem;
+  color: var(--text-color-light);
+  font-weight: 500;
+}
+
+.wf-presentation-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.wf-presentation-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border-color);
+  background: var(--input-bg);
+  color: var(--text-color-light);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+}
+
+.wf-presentation-actions button:hover {
+  background: var(--hover-bg);
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+  transform: translateY(-1px);
+}
+
+.wf-presentation-actions button:last-child:hover {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+
+/* Enhanced No Selection State */
+.wf-no-selection {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-color);
+  font-family: 'Montserrat', sans-serif;
+}
+
+.wf-no-selection-icon {
+  margin-bottom: 1.5rem;
+  opacity: 0.6;
+}
+
+.wf-no-selection-icon svg {
+  color: var(--accent-color);
+}
+
+.wf-no-selection h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.wf-no-selection-description {
+  margin: 0 0 2rem 0;
+  color: var(--text-color-light);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.wf-feature-preview {
+  margin-bottom: 2rem;
+}
+
+.wf-feature-preview h5 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.wf-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.wf-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--input-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.wf-preview-item svg {
+  color: var(--accent-color);
+  flex-shrink: 0;
+}
+
+.wf-preview-content {
+  text-align: left;
+}
+
+.wf-preview-content strong {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 0.25rem;
+}
+
+.wf-preview-content span {
+  font-size: 0.75rem;
+  color: var(--text-color-light);
+}
+
+.wf-interaction-tips {
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.wf-tip-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.wf-tip-item svg {
+  color: var(--accent-color);
+  flex-shrink: 0;
+}
+
+.wf-tip-content {
+  text-align: left;
+}
+
+.wf-tip-content strong {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-color);
+  margin-bottom: 0.125rem;
+}
+
+.wf-tip-content span {
+  font-size: 0.75rem;
+  color: var(--text-color-light);
+}
+
+.wf-detail-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.wf-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.wf-section-title svg {
+  color: var(--accent-color);
+}
+
+.wf-shortcuts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.wf-shortcut-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: var(--input-bg);
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+.wf-shortcut-item span {
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.wf-shortcut-item kbd {
+  background: var(--primary-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.625rem;
+  font-family: monospace;
+  color: var(--text-color-light);
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .wf-graph-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .workflow-name-input {
+    min-width: 150px;
+    font-size: 1rem;
+  }
+  
+  .wf-graph-actions {
+    gap: 0.25rem;
+  }
+  
+  .wf-graph-actions button {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+  
+  .wf-presentation-toolbar {
+    padding: 0.75rem 1rem;
+  }
+  
+  .wf-presentation-title {
+    gap: 0.5rem;
+  }
+  
+  .wf-presentation-title h2 {
+    font-size: 1.25rem;
+  }
+  
+  .wf-shortcuts-grid {
+    grid-template-columns: 1fr;
+  }
+} 

@@ -1,393 +1,410 @@
 import React, { useState } from 'react';
-import { 
-  FiPlay, 
-  FiZap, 
-  FiCode, 
-  FiLayers, 
-  FiChevronDown,
-  FiChevronUp,
-  FiPlus,
-  FiMail,
-  FiDatabase,
-  FiGlobe,
-  FiFileText,
-  FiShoppingCart
-} from 'react-icons/fi';
 import './NodeTemplates.css';
+import { 
+  FiUsers, FiShield, FiServer, FiDatabase, FiSettings, 
+  FiAlertTriangle, FiCheckCircle, FiClock, FiPlay, FiX,
+  FiDownload, FiUpload, FiRefreshCw, FiMail, FiMonitor, FiPlus
+} from 'react-icons/fi';
 
-const workflowTemplates = [
-  {
-    id: 'email-processing',
-    name: 'Email Processing',
-    description: 'Automated email processing and response workflow',
-    icon: <FiMail />,
-    color: '#06b6d4',
-    nodes: [
-      {
-        id: 'email-start',
-        type: 'start',
-        position: { x: 50, y: 50 },
-        data: { label: 'Email Received' }
-      },
-      {
-        id: 'email-analyze',
-        type: 'execute',
-        position: { x: 300, y: 50 },
-        data: { label: 'Analyze Content' }
-      },
-      {
-        id: 'email-categorize',
-        type: 'process',
-        position: { x: 550, y: 50 },
-        data: { label: 'Categorize Email' }
-      },
-      {
-        id: 'email-respond',
-        type: 'execute',
-        position: { x: 300, y: 200 },
-        data: { label: 'Generate Response' }
-      },
-      {
-        id: 'email-end',
-        type: 'end',
-        position: { x: 550, y: 200 },
-        data: { label: 'Send Response' }
+const NodeTemplates = ({ onClose, onCreateWorkflow, onCreateNode }) => {
+  const [selectedCategory, setSelectedCategory] = useState('workflows');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const workflowTemplates = [
+    {
+      id: 'employee-onboarding',
+      name: 'Employee Onboarding',
+      description: 'Complete workflow for onboarding new employees including account creation, role assignment, and system access setup.',
+      icon: <FiUsers />,
+      category: 'HR',
+      nodes: [
+        {
+          id: 'start-1',
+          type: 'start',
+          position: { x: 100, y: 100 },
+          data: { 
+            label: 'Start Onboarding',
+            description: 'Initialize employee onboarding process',
+            status: 'completed'
+          }
+        },
+        {
+          id: 'process-1',
+          type: 'process',
+          position: { x: 300, y: 100 },
+          data: { 
+            label: 'Validate Employee Data',
+            description: 'Check employee information completeness',
+            status: 'running'
+          }
+        },
+        {
+          id: 'execute-1',
+          type: 'execute',
+          position: { x: 500, y: 100 },
+          data: { 
+            label: 'Create User Account',
+            description: 'Create user account in Infraon system',
+            status: 'pending'
+          }
+        },
+        {
+          id: 'execute-2',
+          type: 'execute',
+          position: { x: 300, y: 250 },
+          data: { 
+            label: 'Assign Role',
+            description: 'Assign appropriate role and permissions',
+            status: 'pending'
+          }
+        },
+        {
+          id: 'execute-3',
+          type: 'execute',
+          position: { x: 500, y: 250 },
+          data: { 
+            label: 'Setup Monitoring',
+            description: 'Configure device monitoring for employee',
+            status: 'pending'
+          }
+        },
+        {
+          id: 'execute-4',
+          type: 'execute',
+          position: { x: 300, y: 400 },
+          data: { 
+            label: 'Send Welcome Email',
+            description: 'Send welcome email with login credentials',
+            status: 'pending'
+          }
+        },
+        {
+          id: 'end-1',
+          type: 'end',
+          position: { x: 500, y: 400 },
+          data: { 
+            label: 'Onboarding Complete',
+            description: 'Employee onboarding completed successfully',
+            status: 'pending'
+          }
+        }
+      ],
+      edges: [
+        { id: 'e1', source: 'start-1', target: 'process-1', type: 'smoothstep' },
+        { id: 'e2', source: 'process-1', target: 'execute-1', type: 'smoothstep' },
+        { id: 'e3', source: 'execute-1', target: 'execute-2', type: 'smoothstep' },
+        { id: 'e4', source: 'execute-2', target: 'execute-3', type: 'smoothstep' },
+        { id: 'e5', source: 'execute-3', target: 'execute-4', type: 'smoothstep' },
+        { id: 'e6', source: 'execute-4', target: 'end-1', type: 'smoothstep' }
+      ]
+    },
+    {
+      id: 'incident-response',
+      name: 'Incident Response',
+      description: 'Automated incident response workflow for handling system alerts and outages.',
+      icon: <FiAlertTriangle />,
+      category: 'Operations',
+      nodes: [
+        {
+          id: 'start-1',
+          type: 'start',
+          position: { x: 100, y: 100 },
+          data: { 
+            label: 'Alert Received',
+            description: 'System alert triggered',
+            status: 'completed'
+          }
+        },
+        {
+          id: 'process-1',
+          type: 'process',
+          position: { x: 300, y: 100 },
+          data: { 
+            label: 'Assess Severity',
+            description: 'Evaluate incident severity level',
+            status: 'running'
+          }
+        },
+        {
+          id: 'execute-1',
+          type: 'execute',
+          position: { x: 500, y: 100 },
+          data: { 
+            label: 'Create Incident Ticket',
+            description: 'Create incident ticket in ITSM system',
+            status: 'pending'
+          }
+        },
+        {
+          id: 'execute-2',
+          type: 'execute',
+          position: { x: 300, y: 250 },
+          data: { 
+            label: 'Notify Team',
+            description: 'Send notifications to relevant teams',
+            status: 'pending'
+          }
+        },
+        {
+          id: 'execute-3',
+          type: 'execute',
+          position: { x: 500, y: 250 },
+          data: { 
+            label: 'Update Status Page',
+            description: 'Update public status page',
+            status: 'pending'
+          }
+        },
+        {
+          id: 'end-1',
+          type: 'end',
+          position: { x: 400, y: 400 },
+          data: { 
+            label: 'Incident Handled',
+            description: 'Initial response completed',
+            status: 'pending'
+          }
+        }
+      ],
+      edges: [
+        { id: 'e1', source: 'start-1', target: 'process-1', type: 'smoothstep' },
+        { id: 'e2', source: 'process-1', target: 'execute-1', type: 'smoothstep' },
+        { id: 'e3', source: 'execute-1', target: 'execute-2', type: 'smoothstep' },
+        { id: 'e4', source: 'execute-2', target: 'execute-3', type: 'smoothstep' },
+        { id: 'e5', source: 'execute-3', target: 'end-1', type: 'smoothstep' }
+      ]
+    },
+    {
+      id: 'data-migration',
+      name: 'Data Migration',
+      description: 'Workflow for migrating data between systems with validation and rollback capabilities.',
+      icon: <FiDatabase />,
+      category: 'Data',
+      nodes: [
+        {
+          id: 'start-1',
+          type: 'start',
+          position: { x: 100, y: 100 },
+          data: { 
+            label: 'Start Migration',
+            description: 'Begin data migration process',
+            status: 'completed'
+          }
+        },
+        {
+          id: 'process-1',
+          type: 'process',
+          position: { x: 300, y: 100 },
+          data: { 
+            label: 'Backup Data',
+            description: 'Create backup before migration',
+            status: 'running'
+          }
+        },
+        {
+          id: 'execute-1',
+          type: 'execute',
+          position: { x: 500, y: 100 },
+          data: { 
+            label: 'Migrate Data',
+            description: 'Transfer data to target system',
+            status: 'pending'
+          }
+        },
+        {
+          id: 'process-2',
+          type: 'process',
+          position: { x: 300, y: 250 },
+          data: { 
+            label: 'Validate Migration',
+            description: 'Verify data integrity',
+            status: 'pending'
+          }
+        },
+        {
+          id: 'execute-2',
+          type: 'execute',
+          position: { x: 500, y: 250 },
+          data: { 
+            label: 'Update References',
+            description: 'Update system references',
+            status: 'pending'
+          }
+        },
+        {
+          id: 'end-1',
+          type: 'end',
+          position: { x: 400, y: 400 },
+          data: { 
+            label: 'Migration Complete',
+            description: 'Data migration completed successfully',
+            status: 'pending'
+          }
+        }
+      ],
+      edges: [
+        { id: 'e1', source: 'start-1', target: 'process-1', type: 'smoothstep' },
+        { id: 'e2', source: 'process-1', target: 'execute-1', type: 'smoothstep' },
+        { id: 'e3', source: 'execute-1', target: 'process-2', type: 'smoothstep' },
+        { id: 'e4', source: 'process-2', target: 'execute-2', type: 'smoothstep' },
+        { id: 'e5', source: 'execute-2', target: 'end-1', type: 'smoothstep' }
+      ]
+    }
+  ];
+
+  const nodeTemplates = [
+    {
+      id: 'start',
+      name: 'Start',
+      description: 'Workflow entry point',
+      icon: <FiPlay />,
+      type: 'start',
+      data: { 
+        label: 'Start Process',
+        description: 'Initialize the workflow',
+        status: 'completed'
       }
-    ],
-    edges: [
-      { id: 'e1', source: 'email-start', target: 'email-analyze' },
-      { id: 'e2', source: 'email-analyze', target: 'email-categorize' },
-      { id: 'e3', source: 'email-categorize', target: 'email-respond' },
-      { id: 'e4', source: 'email-respond', target: 'email-end' }
-    ]
-  },
-  {
-    id: 'data-analysis',
-    name: 'Data Analysis Pipeline',
-    description: 'Complete data processing and analysis workflow',
-    icon: <FiDatabase />,
-    color: '#10b981',
-    nodes: [
-      {
-        id: 'data-start',
-        type: 'start',
-        position: { x: 50, y: 50 },
-        data: { label: 'Data Input' }
-      },
-      {
-        id: 'data-clean',
-        type: 'process',
-        position: { x: 300, y: 50 },
-        data: { label: 'Clean Data' }
-      },
-      {
-        id: 'data-analyze',
-        type: 'execute',
-        position: { x: 550, y: 50 },
-        data: { label: 'AI Analysis' }
-      },
-      {
-        id: 'data-visualize',
-        type: 'process',
-        position: { x: 300, y: 200 },
-        data: { label: 'Create Visualizations' }
-      },
-      {
-        id: 'data-report',
-        type: 'end',
-        position: { x: 550, y: 200 },
-        data: { label: 'Generate Report' }
+    },
+    {
+      id: 'process',
+      name: 'Process',
+      description: 'Data processing or validation step',
+      icon: <FiSettings />,
+      type: 'process',
+      data: { 
+        label: 'Process Data',
+        description: 'Process or validate data',
+        status: 'pending'
       }
-    ],
-    edges: [
-      { id: 'e1', source: 'data-start', target: 'data-clean' },
-      { id: 'e2', source: 'data-clean', target: 'data-analyze' },
-      { id: 'e3', source: 'data-analyze', target: 'data-visualize' },
-      { id: 'e4', source: 'data-visualize', target: 'data-report' }
-    ]
-  },
-  {
-    id: 'content-creation',
-    name: 'Content Creation',
-    description: 'Automated content generation and publishing',
-    icon: <FiFileText />,
-    color: '#8b5cf6',
-    nodes: [
-      {
-        id: 'content-start',
-        type: 'start',
-        position: { x: 50, y: 50 },
-        data: { label: 'Topic Input' }
-      },
-      {
-        id: 'content-research',
-        type: 'execute',
-        position: { x: 300, y: 50 },
-        data: { label: 'Research Topic' }
-      },
-      {
-        id: 'content-write',
-        type: 'execute',
-        position: { x: 550, y: 50 },
-        data: { label: 'Generate Content' }
-      },
-      {
-        id: 'content-review',
-        type: 'process',
-        position: { x: 300, y: 200 },
-        data: { label: 'Review & Edit' }
-      },
-      {
-        id: 'content-publish',
-        type: 'end',
-        position: { x: 550, y: 200 },
-        data: { label: 'Publish Content' }
+    },
+    {
+      id: 'execute',
+      name: 'Execute',
+      description: 'Execute external action or API call',
+      icon: <FiServer />,
+      type: 'execute',
+      data: { 
+        label: 'Execute Action',
+        description: 'Execute external action',
+        status: 'pending'
       }
-    ],
-    edges: [
-      { id: 'e1', source: 'content-start', target: 'content-research' },
-      { id: 'e2', source: 'content-research', target: 'content-write' },
-      { id: 'e3', source: 'content-write', target: 'content-review' },
-      { id: 'e4', source: 'content-review', target: 'content-publish' }
-    ]
-  },
-  {
-    id: 'web-scraping',
-    name: 'Web Scraping & Analysis',
-    description: 'Extract and analyze data from websites',
-    icon: <FiGlobe />,
-    color: '#f59e0b',
-    nodes: [
-      {
-        id: 'scrape-start',
-        type: 'start',
-        position: { x: 50, y: 50 },
-        data: { label: 'Target URLs' }
-      },
-      {
-        id: 'scrape-extract',
-        type: 'process',
-        position: { x: 300, y: 50 },
-        data: { label: 'Extract Data' }
-      },
-      {
-        id: 'scrape-process',
-        type: 'process',
-        position: { x: 550, y: 50 },
-        data: { label: 'Process Data' }
-      },
-      {
-        id: 'scrape-analyze',
-        type: 'execute',
-        position: { x: 300, y: 200 },
-        data: { label: 'AI Analysis' }
-      },
-      {
-        id: 'scrape-export',
-        type: 'end',
-        position: { x: 550, y: 200 },
-        data: { label: 'Export Results' }
+    },
+    {
+      id: 'end',
+      name: 'End',
+      description: 'Workflow completion point',
+      icon: <FiCheckCircle />,
+      type: 'end',
+      data: { 
+        label: 'Complete',
+        description: 'Workflow completed',
+        status: 'pending'
       }
-    ],
-    edges: [
-      { id: 'e1', source: 'scrape-start', target: 'scrape-extract' },
-      { id: 'e2', source: 'scrape-extract', target: 'scrape-process' },
-      { id: 'e3', source: 'scrape-process', target: 'scrape-analyze' },
-      { id: 'e4', source: 'scrape-analyze', target: 'scrape-export' }
-    ]
-  }
-];
+    }
+  ];
 
-const nodeTemplates = [
-  {
-    id: 'single-start',
-    type: 'start',
-    name: 'Start Node',
-    description: 'Workflow entry point',
-    icon: <FiPlay />,
-    color: '#10b981'
-  },
-  {
-    id: 'single-execute',
-    type: 'execute',
-    name: 'AI Execute',
-    description: 'AI processing node',
-    icon: <FiZap />,
-    color: '#8b5cf6'
-  },
-  {
-    id: 'single-process',
-    type: 'process',
-    name: 'Process Data',
-    description: 'Data transformation',
-    icon: <FiCode />,
-    color: '#f59e0b'
-  },
-  {
-    id: 'single-end',
-    type: 'end',
-    name: 'End Node',
-    description: 'Workflow completion',
-    icon: <FiLayers />,
-    color: '#ef4444'
-  }
-];
+  const filteredWorkflows = workflowTemplates.filter(template =>
+    template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    template.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-const NodeTemplates = ({ visible, onClose, onCreateWorkflow, onCreateNode }) => {
-  const [activeSection, setActiveSection] = useState('workflows');
-  const [expandedWorkflow, setExpandedWorkflow] = useState(null);
+  const filteredNodes = nodeTemplates.filter(template =>
+    template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    template.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  if (!visible) return null;
-
-  const handleWorkflowCreate = (template) => {
-    // Generate unique IDs for the nodes and edges
-    const uniqueNodes = template.nodes.map(node => ({
-      ...node,
-      id: `${node.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    }));
-
-    const uniqueEdges = template.edges.map(edge => {
-      const sourceNode = uniqueNodes.find(n => n.id.startsWith(edge.source));
-      const targetNode = uniqueNodes.find(n => n.id.startsWith(edge.target));
-      return {
-        ...edge,
-        id: `${edge.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        source: sourceNode?.id || edge.source,
-        target: targetNode?.id || edge.target
-      };
-    });
-
-    onCreateWorkflow({
-      nodes: uniqueNodes,
-      edges: uniqueEdges,
-      template: template
-    });
+  const handleCreateWorkflow = (template) => {
+    onCreateWorkflow(template);
     onClose();
   };
 
-  const handleNodeCreate = (template) => {
+  const handleCreateNode = (template) => {
     const newNode = {
-      id: `${template.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type: template.type,
-      position: { x: 200, y: 150 },
-      data: { label: template.name }
+      position: { x: 200, y: 200 },
+      data: template.data
     };
-    
     onCreateNode(newNode);
     onClose();
   };
 
   return (
-    <div className="wf-templates-overlay" onClick={onClose}>
-      <div className="wf-templates-panel" onClick={(e) => e.stopPropagation()}>
-        <div className="wf-templates-header">
+    <div className="node-templates-overlay">
+      <div className="node-templates-modal">
+        <div className="node-templates-header">
           <h2>Workflow Templates</h2>
-          <button className="wf-templates-close" onClick={onClose}>×</button>
-        </div>
-
-        <div className="wf-templates-tabs">
-          <button 
-            className={`wf-templates-tab ${activeSection === 'workflows' ? 'active' : ''}`}
-            onClick={() => setActiveSection('workflows')}
-          >
-            Complete Workflows
-          </button>
-          <button 
-            className={`wf-templates-tab ${activeSection === 'nodes' ? 'active' : ''}`}
-            onClick={() => setActiveSection('nodes')}
-          >
-            Individual Nodes
+          <button className="close-button" onClick={onClose}>
+            <FiX />
           </button>
         </div>
 
-        <div className="wf-templates-content">
-          {activeSection === 'workflows' && (
-            <div className="wf-templates-section">
-              <h3>Pre-built Workflow Templates</h3>
-              <p>Choose from common workflow patterns to get started quickly</p>
-              
-              <div className="wf-templates-list">
-                {workflowTemplates.map((template) => (
-                  <div key={template.id} className="wf-template-item">
-                    <div 
-                      className="wf-template-header"
-                      onClick={() => setExpandedWorkflow(
-                        expandedWorkflow === template.id ? null : template.id
-                      )}
-                    >
-                      <div className="wf-template-info">
-                        <div 
-                          className="wf-template-icon" 
-                          style={{ background: `${template.color}20`, color: template.color }}
-                        >
-                          {template.icon}
-                        </div>
-                        <div className="wf-template-details">
-                          <h4>{template.name}</h4>
-                          <p>{template.description}</p>
-                          <span className="wf-template-meta">
-                            {template.nodes.length} nodes • {template.edges.length} connections
-                          </span>
-                        </div>
-                      </div>
-                      <div className="wf-template-actions">
-                        {expandedWorkflow === template.id ? <FiChevronUp /> : <FiChevronDown />}
-                      </div>
+        <div className="node-templates-search">
+          <input
+            type="text"
+            placeholder="Search templates..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+        </div>
+
+        <div className="node-templates-tabs">
+          <button
+            className={`tab-button ${selectedCategory === 'workflows' ? 'active' : ''}`}
+            onClick={() => setSelectedCategory('workflows')}
+          >
+            <FiPlay /> Workflows
+          </button>
+          <button
+            className={`tab-button ${selectedCategory === 'nodes' ? 'active' : ''}`}
+            onClick={() => setSelectedCategory('nodes')}
+          >
+            <FiSettings /> Nodes
+          </button>
+        </div>
+
+        <div className="node-templates-content">
+          {selectedCategory === 'workflows' ? (
+            <div className="workflow-templates">
+              {filteredWorkflows.map((template) => (
+                <div key={template.id} className="template-card workflow-template">
+                  <div className="template-header">
+                    <div className="template-icon">{template.icon}</div>
+                    <div className="template-info">
+                      <h3>{template.name}</h3>
+                      <span className="template-category">{template.category}</span>
                     </div>
-
-                    {expandedWorkflow === template.id && (
-                      <div className="wf-template-expanded">
-                        <div className="wf-template-preview">
-                          <h5>Workflow Steps:</h5>
-                          <ol>
-                            {template.nodes.map((node) => (
-                              <li key={node.id}>{node.data.label}</li>
-                            ))}
-                          </ol>
-                        </div>
-                        <button 
-                          className="wf-template-create-btn"
-                          onClick={() => handleWorkflowCreate(template)}
-                        >
-                          <FiPlus />
-                          Create This Workflow
-                        </button>
-                      </div>
-                    )}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeSection === 'nodes' && (
-            <div className="wf-templates-section">
-              <h3>Individual Node Types</h3>
-              <p>Add specific node types to build your custom workflow</p>
-              
-              <div className="wf-node-templates-grid">
-                {nodeTemplates.map((template) => (
-                  <div 
-                    key={template.id} 
-                    className="wf-node-template-item"
-                    onClick={() => handleNodeCreate(template)}
+                  <p className="template-description">{template.description}</p>
+                  <div className="template-stats">
+                    <span>{template.nodes.length} nodes</span>
+                    <span>{template.edges.length} connections</span>
+                  </div>
+                  <button
+                    className="use-template-button"
+                    onClick={() => handleCreateWorkflow(template)}
                   >
-                    <div 
-                      className="wf-node-template-icon"
-                      style={{ background: `${template.color}20`, color: template.color }}
-                    >
-                      {template.icon}
-                    </div>
-                    <div className="wf-node-template-info">
-                      <h4>{template.name}</h4>
-                      <p>{template.description}</p>
-                    </div>
-                    <button className="wf-node-template-add">
-                      <FiPlus />
-                    </button>
-                  </div>
-                ))}
-              </div>
+                    <FiPlay /> Use Template
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="node-templates-grid">
+              {filteredNodes.map((template) => (
+                <div key={template.id} className="template-card node-template">
+                  <div className="template-icon">{template.icon}</div>
+                  <h3>{template.name}</h3>
+                  <p>{template.description}</p>
+                  <button
+                    className="add-node-button"
+                    onClick={() => handleCreateNode(template)}
+                  >
+                    <FiPlus /> Add Node
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>

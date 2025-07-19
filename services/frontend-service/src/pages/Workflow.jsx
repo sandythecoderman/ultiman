@@ -19,6 +19,7 @@ import CustomNode from '../components/CustomNode';
 import EmptyWorkflow from '../components/EmptyWorkflow';
 import ContextMenu from '../components/ContextMenu';
 import NodeTemplates from '../components/NodeTemplates';
+import FloatingToolbar from '../components/FloatingToolbar';
 import { WORKFLOW_GENERATE_ENDPOINT } from '../config';
 import { 
   FiMaximize, 
@@ -28,7 +29,10 @@ import {
   FiPlay,
   FiX,
   FiGrid,
-  FiMoreHorizontal
+  FiMoreHorizontal,
+  FiSave,
+  FiRotateCcw,
+  FiZap
 } from 'react-icons/fi';
 
 const nodeTypes = {
@@ -169,6 +173,9 @@ const Workflow = () => {
   const [presentationMode, setPresentationMode] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [workflowName, setWorkflowName] = useState('Untitled Workflow');
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [executionStep, setExecutionStep] = useState(0);
   const [contextMenu, setContextMenu] = useState({
     visible: false,
     x: 0,
@@ -201,13 +208,19 @@ const Workflow = () => {
     setNodes(templateData.nodes);
     setEdges(templateData.edges);
     setSelectedNode(null);
-    console.log('Created workflow from template:', templateData.template.name);
+    setWorkflowName(templateData.name);
+    console.log('Created workflow from template:', templateData.name);
   };
 
   const handleCreateNode = (nodeData) => {
     setNodes((nds) => [...nds, nodeData]);
     setSelectedNode(nodeData);
     console.log('Created node from template:', nodeData.type);
+  };
+
+  const handleAddNode = (nodeData) => {
+    setNodes((nds) => [...nds, nodeData]);
+    setSelectedNode(nodeData);
   };
 
   // Presentation mode handlers
@@ -280,19 +293,23 @@ const Workflow = () => {
     setNodes(newNodes);
   }, [nodes]);
 
-  // Export workflow as image
-  const exportAsImage = useCallback(() => {
-    // Create a simple workflow export for demo
+  // Export workflow as JSON
+  const exportWorkflow = useCallback(() => {
     const workflowData = {
+      name: workflowName,
       nodes: nodes.map(node => ({
         id: node.id,
         type: node.type,
         label: node.data.label,
-        position: node.position
+        description: node.data.description,
+        position: node.position,
+        status: node.data.status
       })),
       edges: edges.map(edge => ({
         source: edge.source,
-        target: edge.target
+        target: edge.target,
+        label: edge.label,
+        type: edge.type
       })),
       exportedAt: new Date().toISOString()
     };
@@ -301,10 +318,81 @@ const Workflow = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `workflow-export-${Date.now()}.json`;
+    a.download = `${workflowName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [nodes, edges]);
+  }, [nodes, edges, workflowName]);
+
+  // Execute workflow
+  const executeWorkflow = useCallback(async () => {
+    if (isExecuting) return;
+    
+    setIsExecuting(true);
+    setExecutionStep(0);
+    
+    // Find start nodes
+    const startNodes = nodes.filter(node => node.type === 'start');
+    
+    for (let i = 0; i < startNodes.length; i++) {
+      const startNode = startNodes[i];
+      
+      // Update start node status
+      setNodes(prev => prev.map(node => 
+        node.id === startNode.id 
+          ? { ...node, data: { ...node.data, status: 'running' } }
+          : node
+      ));
+      
+      setExecutionStep(i + 1);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simulate workflow execution
+      const executionOrder = getExecutionOrder(startNode.id);
+      
+      for (let j = 0; j < executionOrder.length; j++) {
+        const nodeId = executionOrder[j];
+        
+        // Update node status to running
+        setNodes(prev => prev.map(node => 
+          node.id === nodeId 
+            ? { ...node, data: { ...node.data, status: 'running' } }
+            : node
+        ));
+        
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Update node status to completed
+        setNodes(prev => prev.map(node => 
+          node.id === nodeId 
+            ? { ...node, data: { ...node.data, status: 'completed' } }
+            : node
+        ));
+      }
+    }
+    
+    setIsExecuting(false);
+    setExecutionStep(0);
+  }, [nodes, edges, isExecuting]);
+
+  // Get execution order based on connections
+  const getExecutionOrder = (startNodeId) => {
+    const order = [];
+    const visited = new Set();
+    
+    const traverse = (nodeId) => {
+      if (visited.has(nodeId)) return;
+      visited.add(nodeId);
+      
+      const outgoingEdges = edges.filter(edge => edge.source === nodeId);
+      for (const edge of outgoingEdges) {
+        traverse(edge.target);
+      }
+      order.push(nodeId);
+    };
+    
+    traverse(startNodeId);
+    return order.reverse().slice(1); // Remove start node
+  };
 
   // Context menu action handler
   const handleContextAction = useCallback((action, data) => {
@@ -320,7 +408,9 @@ const Workflow = () => {
             y: contextMenu.y - 100 
           },
           data: { 
-            label: `${data.type.charAt(0).toUpperCase() + data.type.slice(1)} Node` 
+            label: `${data.type.charAt(0).toUpperCase() + data.type.slice(1)} Node`,
+            description: `Add ${data.type} functionality`,
+            status: 'pending'
           }
         };
         setNodes((nds) => [...nds, newNode]);
@@ -401,265 +491,144 @@ const Workflow = () => {
         }
         break;
 
-      case 'auto-layout':
-        autoLayout();
-        break;
-
-      case 'export-image':
-        exportAsImage();
-        break;
-
-      case 'quick-connect':
-        if (data.nodeData) {
-          // Find the next available node to connect to
-          const availableNodes = nodes.filter(node => 
-            node.id !== data.nodeData.id && 
-            !edges.some(edge => edge.source === data.nodeData.id && edge.target === node.id)
-          );
-          
-          if (availableNodes.length > 0) {
-            const targetNode = availableNodes[0];
-            const newEdge = {
-              id: `edge-${Date.now()}`,
-              source: data.nodeData.id,
-              target: targetNode.id,
-              label: 'connects',
-              type: 'smoothstep'
-            };
-            setEdges(eds => [...eds, newEdge]);
-            console.log('Quick connected:', data.nodeData.id, 'to', targetNode.id);
-          } else {
-            console.log('No available nodes to connect to');
-          }
-        }
-        break;
-
       default:
-        console.log('Unknown action:', action);
+        break;
     }
-  }, [contextMenu, nodes, selectedNode, autoLayout, exportAsImage, presentationMode]);
+    closeContextMenu();
+  }, [contextMenu, presentationMode, selectedNode, closeContextMenu]);
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event) => {
-      // Ignore if typing in input fields
-      if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-        return;
-      }
+      if (presentationMode) return;
 
-      const isCtrl = event.ctrlKey || event.metaKey;
-      
-      switch (event.key) {
-        case '1':
-          if (!isCtrl) {
-            handleContextAction('create-node', { type: 'start' });
+      if (event.ctrlKey || event.metaKey) {
+        switch (event.key) {
+          case 't':
             event.preventDefault();
-          }
-          break;
-        case '2':
-          if (!isCtrl) {
-            handleContextAction('create-node', { type: 'execute' });
-            event.preventDefault();
-          }
-          break;
-        case '3':
-          if (!isCtrl) {
-            handleContextAction('create-node', { type: 'process' });
-            event.preventDefault();
-          }
-          break;
-        case '4':
-          if (!isCtrl) {
-            handleContextAction('create-node', { type: 'end' });
-            event.preventDefault();
-          }
-          break;
-        case 'l':
-        case 'L':
-          if (event.shiftKey) {
-            autoLayout();
-            event.preventDefault();
-          }
-          break;
-        case 't':
-        case 'T':
-          if (isCtrl) {
             setShowTemplates(true);
+            break;
+          case 'e':
             event.preventDefault();
-          }
-          break;
-        case 'd':
-        case 'D':
-          if (isCtrl && selectedNode) {
-            handleContextAction('duplicate-node', { nodeData: selectedNode });
+            exportWorkflow();
+            break;
+          case 'f':
             event.preventDefault();
-          }
-          break;
-        case 'Delete':
-        case 'Backspace':
-          if (selectedNode && !isCtrl) {
-            handleContextAction('delete-node', { nodeData: selectedNode });
-            event.preventDefault();
-          }
-          break;
-        case 'Escape':
-          if (presentationMode) {
             togglePresentationMode();
-          } else if (showTemplates) {
-            setShowTemplates(false);
-          } else {
-            setSelectedNode(null);
-            closeContextMenu();
-          }
-          break;
-        case 'F11':
-          togglePresentationMode();
-          event.preventDefault();
-          break;
-        case 'f':
-          if (isCtrl) {
-            togglePresentationMode();
+            break;
+          case 's':
             event.preventDefault();
-          }
-          break;
-        case 'e':
-          if (isCtrl) {
-            exportAsImage();
+            // Save workflow (implement later)
+            console.log('Save workflow');
+            break;
+          default:
+            break;
+        }
+      } else if (event.shiftKey) {
+        switch (event.key) {
+          case 'L':
             event.preventDefault();
-          }
-          break;
-        case 'a':
-          if (isCtrl) {
-            // Select all nodes
-            setNodes(nds => nds.map(node => ({ ...node, selected: true })));
-            event.preventDefault();
-          }
-          break;
-        case 'r':
-          if (isCtrl) {
-            // Reset/clear workflow
-            setNodes([]);
-            setEdges([]);
-            setSelectedNode(null);
-            event.preventDefault();
-          }
-          break;
-        case 'z':
-          if (isCtrl && !event.shiftKey) {
-            // Undo functionality placeholder
-            console.log('Undo action');
-            event.preventDefault();
-          }
-          break;
-        case 'y':
-          if (isCtrl) {
-            // Redo functionality placeholder
-            console.log('Redo action');
-            event.preventDefault();
-          }
-          break;
+            autoLayout();
+            break;
+          default:
+            break;
+        }
+      } else {
+        switch (event.key) {
+          case 'Escape':
+            if (showTemplates) {
+              setShowTemplates(false);
+            } else if (contextMenu.visible) {
+              closeContextMenu();
+            }
+            break;
+          default:
+            break;
+        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNode, handleContextAction, autoLayout, closeContextMenu, presentationMode, togglePresentationMode, showTemplates]);
-
-  // Clean up on unmount
-  useEffect(() => {
     return () => {
-      document.body.style.overflow = 'auto';
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [presentationMode, showTemplates, contextMenu.visible, closeContextMenu, exportWorkflow, togglePresentationMode, autoLayout]);
 
+  // Load workflow from URL params
   useEffect(() => {
-    const promptFromHome = location.state?.prompt;
-    if (promptFromHome) {
-      const userMessage = { sender: 'user', text: promptFromHome };
-      
-      // Update messages to show the user's prompt
-      setMessages(prev => [...prev, userMessage]);
-
-      // Define an async function to call the backend
+    const params = new URLSearchParams(location.search);
+    const workflowId = params.get('workflow');
+    
+    if (workflowId) {
       const fetchWorkflow = async () => {
         try {
-          const agentResponse = await handleSendMessage({ query: promptFromHome });
-          const agentMessage = {
-            sender: 'agent',
-            text: agentResponse.response || 'Sorry, I had trouble understanding that.',
-          };
-          setMessages(prev => [...prev, userMessage, agentMessage]);
-          if (agentResponse.nodes && agentResponse.edges) {
-            setNodes(agentResponse.nodes);
-            setEdges(agentResponse.edges);
-          }
+          // Simulate fetching workflow data
+          console.log('Loading workflow:', workflowId);
+          // In real implementation, fetch from API
         } catch (error) {
-           const errorMessage = {
-            sender: 'agent',
-            text: error.message || 'Failed to fetch. Please check the backend logs.',
-            isError: true,
-          };
-          setMessages(prev => [...prev, userMessage, errorMessage]);
+          console.error('Error loading workflow:', error);
         }
       };
-
-      fetchWorkflow();
       
-      // Clear the state to prevent re-triggering
-      navigate(location.pathname, { replace: true });
+      fetchWorkflow();
     }
-  }, [location, navigate]);
+  }, [location]);
 
+  // Chat message handler
   const handleSendMessage = async (payload) => {
-    const response = await fetch(WORKFLOW_GENERATE_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    const newMessage = {
+      id: Date.now(),
+      type: 'user',
+      content: payload,
+      timestamp: new Date().toISOString()
+    };
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || `HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    if (data.nodes && data.edges) {
-      setNodes(data.nodes);
-      setEdges(data.edges);
-    }
+    setMessages(prev => [...prev, newMessage]);
 
-    return data;
+    // Simulate AI response
+    setTimeout(() => {
+      const aiResponse = {
+        id: Date.now() + 1,
+        type: 'assistant',
+        content: `I understand you want to work with workflows. I can help you create, modify, and execute workflows. What would you like to do?`,
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, aiResponse]);
+    }, 1000);
   };
-  
+
+  // Node data change handler
   const handleNodeDataChange = (newData) => {
-    if (!selectedNode) return;
-
-    setNodes((nds) =>
-      nds.map((n) => {
-        if (n.id === selectedNode.id) {
-          const updatedData = { ...n.data, ...newData };
-          return { ...n, data: updatedData };
-        }
-        return n;
-      })
-    );
+    if (selectedNode) {
+      setNodes(prev => prev.map(node => 
+        node.id === selectedNode.id 
+          ? { ...node, data: { ...node.data, ...newData } }
+          : node
+      ));
+      setSelectedNode(prev => ({ ...prev, data: { ...prev.data, ...newData } }));
+    }
   };
 
-  // Presentation mode component
+  // Presentation mode render
   if (presentationMode) {
     return (
       <div className="wf-presentation-mode">
         {/* Minimal toolbar */}
         <div className="wf-presentation-toolbar">
           <div className="wf-presentation-title">
-            <h2>Workflow Demo</h2>
-            <span>{nodes.length} nodes</span>
+            <h2>{workflowName}</h2>
+            <span>{nodes.length} nodes • {edges.length} connections</span>
+            {isExecuting && (
+              <span className="execution-status">
+                <FiZap className="spinning" /> Executing... Step {executionStep}
+              </span>
+            )}
           </div>
           <div className="wf-presentation-actions">
             <button onClick={autoLayout} title="Auto Layout">
               <FiSettings />
             </button>
-            <button onClick={exportAsImage} title="Export">
+            <button onClick={exportWorkflow} title="Export">
               <FiDownload />
             </button>
             <button onClick={togglePresentationMode} title="Exit Presentation (Esc)">
@@ -761,16 +730,36 @@ const Workflow = () => {
         {/* Graph toolbar */}
         <div className="wf-graph-toolbar">
           <div className="wf-graph-info">
+            <input
+              type="text"
+              value={workflowName}
+              onChange={(e) => setWorkflowName(e.target.value)}
+              className="workflow-name-input"
+              placeholder="Enter workflow name..."
+            />
             <span>{nodes.length} nodes • {edges.length} connections</span>
+            {isExecuting && (
+              <span className="execution-status">
+                <FiZap className="spinning" /> Executing... Step {executionStep}
+              </span>
+            )}
           </div>
           <div className="wf-graph-actions">
+            <button 
+              onClick={executeWorkflow} 
+              disabled={isExecuting}
+              className={isExecuting ? 'executing' : ''}
+              title="Execute Workflow"
+            >
+              <FiPlay />
+            </button>
             <button onClick={() => setShowTemplates(true)} title="Templates (Ctrl+T)">
               <FiGrid />
             </button>
             <button onClick={autoLayout} title="Auto Layout (Shift+L)">
               <FiSettings />
             </button>
-            <button onClick={exportAsImage} title="Export (Ctrl+E)">
+            <button onClick={exportWorkflow} title="Export (Ctrl+E)">
               <FiDownload />
             </button>
             <button onClick={togglePresentationMode} title="Presentation Mode (Ctrl+F)">
@@ -903,6 +892,25 @@ const Workflow = () => {
         </div>
       </div>
 
+      {/* Floating Toolbar */}
+      <FloatingToolbar
+        onAddNode={handleAddNode}
+        onShowTemplates={() => setShowTemplates(true)}
+        onAutoLayout={autoLayout}
+        onExport={exportWorkflow}
+        onTogglePresentation={togglePresentationMode}
+        isPresentationMode={presentationMode}
+      />
+
+      {/* Templates Modal */}
+      {showTemplates && (
+        <NodeTemplates
+          onClose={() => setShowTemplates(false)}
+          onCreateWorkflow={handleCreateWorkflow}
+          onCreateNode={handleCreateNode}
+        />
+      )}
+
       {/* Context Menu */}
       <ContextMenu
         x={contextMenu.x}
@@ -912,14 +920,6 @@ const Workflow = () => {
         nodeData={contextMenu.nodeData}
         onClose={closeContextMenu}
         onAction={handleContextAction}
-      />
-
-      {/* Node Templates */}
-      <NodeTemplates
-        visible={showTemplates}
-        onClose={() => setShowTemplates(false)}
-        onCreateWorkflow={handleCreateWorkflow}
-        onCreateNode={handleCreateNode}
       />
     </div>
   );
