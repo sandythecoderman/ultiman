@@ -42,16 +42,16 @@
 }
 
 body.dark {
-  /* Dark Theme */
-  --primary-bg: #0f172a;
-  --secondary-bg: #1e293b;
+  /* Dark Theme - Black */
+  --primary-bg: #000000;
+  --secondary-bg: #111111;
   --accent-color: #22c55e;
-  --text-color: #f8fafc;
-  --text-color-light: #cbd5e1;
-  --border-color: #334155;
-  --input-bg: #1e293b;
-  --hover-bg: #334155;
-  --bg-color: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --text-color: #ffffff;
+  --text-color-light: #cccccc;
+  --border-color: #333333;
+  --input-bg: #111111;
+  --hover-bg: #222222;
+  --bg-color: linear-gradient(135deg, #000000 0%, #111111 100%);
   
   --success-color: #34d399;
   --warning-color: #fbbf24;
