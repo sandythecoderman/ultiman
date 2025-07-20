@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional
 import time
 import json
 
-from engine import GeminiRAG
+from .engine import GeminiRAG
 
 # --- FastAPI App Initialization ---
 app = FastAPI(
