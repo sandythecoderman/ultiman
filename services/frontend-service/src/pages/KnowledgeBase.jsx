@@ -517,9 +517,9 @@ const KnowledgeBase = () => {
                       color: '#fff',
                     } : {
                       '--segment-color': color,
-                      backgroundColor: '#222',
-                      borderColor: color,
-                      color: '#fff',
+                      backgroundColor: `${color}20`,
+                      borderColor: `${color}40`,
+                      color: color,
                     }}
                   >
                     <span className="kb-segment-label">{type}</span>

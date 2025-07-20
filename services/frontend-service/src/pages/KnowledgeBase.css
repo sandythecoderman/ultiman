@@ -536,8 +536,10 @@
 
 .kb-segment:hover {
   background: var(--hover-bg);
-  border-color: var(--text-color-light);
-  color: var(--text-color);
+  border-color: var(--segment-color, var(--text-color-light));
+  color: var(--segment-color, var(--text-color));
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .kb-segment.selected {
@@ -585,7 +587,7 @@
 }
 
 .kb-segment-count {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
   color: inherit;
   padding: 0.25rem 0.5rem;
   border-radius: 12px;
@@ -593,11 +595,13 @@
   font-weight: 600;
   min-width: 24px;
   text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .kb-segment.selected .kb-segment-count {
   background: rgba(255, 255, 255, 0.3);
   color: white;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 /* Loading and Error States */
