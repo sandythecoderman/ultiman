@@ -549,6 +549,25 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.18);
 }
 
+/* Relationship buttons - light grey when unchecked */
+.kb-segment.relationship {
+  background: #444444 !important;
+  border-color: #666666 !important;
+  color: #cccccc !important;
+}
+
+.kb-segment.relationship:hover {
+  background: #555555 !important;
+  border-color: #777777 !important;
+  color: #dddddd !important;
+}
+
+.kb-segment.relationship.selected {
+  background: #22c55e !important;
+  border-color: #22c55e !important;
+  color: #ffffff !important;
+}
+
 .kb-segment.selected::before {
   content: '';
   position: absolute;
