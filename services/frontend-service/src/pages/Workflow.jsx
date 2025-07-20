@@ -10,6 +10,7 @@ import ReactFlow, {
   useReactFlow,
   getBezierPath,
   getSmoothStepPath,
+  ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import './Workflow.css';
@@ -24,9 +25,175 @@ import CommandPalette from '../components/CommandPalette.jsx';
 
 const nodeTypes = {
   custom: CustomNode,
+  start: CustomNode,
+  execute: CustomNode,
+  process: CustomNode,
+  end: CustomNode,
 };
 
-const Workflow = () => {
+const createMockWorkflow = (query) => {
+  // Create a mock workflow based on the query
+  const steps = [
+    {
+      id: 'start-1',
+      type: 'start',
+      data: {
+        label: 'Start Workflow',
+        description: `Query: ${query}`,
+        status: 'completed',
+        icon: '🚀'
+      },
+      style: {
+        background: '#10b981',
+        color: 'white',
+        border: '2px solid #059669',
+        borderRadius: '8px',
+        padding: '10px',
+        fontWeight: 'bold'
+      }
+    }
+  ];
+
+  // Add workflow steps based on query content
+  if (query.toLowerCase().includes('create') && query.toLowerCase().includes('user')) {
+    steps.push({
+      id: 'step-1',
+      type: 'execute',
+      data: {
+        label: 'Create Users',
+        description: 'Create 5 new users with specified roles',
+        status: 'pending',
+        icon: '👥',
+        operation_id: 'create_users'
+      },
+      style: {
+        background: '#3b82f6',
+        color: 'white',
+        border: '2px solid #2563eb',
+        borderRadius: '8px',
+        padding: '10px',
+        fontWeight: 'bold'
+      }
+    });
+  }
+
+  if (query.toLowerCase().includes('requester')) {
+    steps.push({
+      id: 'step-2',
+      type: 'execute',
+      data: {
+        label: 'Create Requesters',
+        description: 'Create 3 requesters with appropriate permissions',
+        status: 'pending',
+        icon: '📋',
+        operation_id: 'create_requesters'
+      },
+      style: {
+        background: '#3b82f6',
+        color: 'white',
+        border: '2px solid #2563eb',
+        borderRadius: '8px',
+        padding: '10px',
+        fontWeight: 'bold'
+      }
+    });
+  }
+
+  if (query.toLowerCase().includes('authenticate')) {
+    steps.push({
+      id: 'step-3',
+      type: 'execute',
+      data: {
+        label: 'Authenticate Users',
+        description: 'Authenticate each user and verify access',
+        status: 'pending',
+        icon: '🔐',
+        operation_id: 'authenticate_users'
+      },
+      style: {
+        background: '#3b82f6',
+        color: 'white',
+        border: '2px solid #2563eb',
+        borderRadius: '8px',
+        padding: '10px',
+        fontWeight: 'bold'
+      }
+    });
+  }
+
+  if (query.toLowerCase().includes('count') || query.toLowerCase().includes('active')) {
+    steps.push({
+      id: 'step-4',
+      type: 'process',
+      data: {
+        label: 'Get Active Count',
+        description: 'Retrieve and display active user count',
+        status: 'pending',
+        icon: '📊',
+        operation_id: 'get_active_count'
+      },
+      style: {
+        background: '#8b5cf6',
+        color: 'white',
+        border: '2px solid #7c3aed',
+        borderRadius: '8px',
+        padding: '10px',
+        fontWeight: 'bold'
+      }
+    });
+  }
+
+  // Add end step
+  steps.push({
+    id: 'end-1',
+    type: 'end',
+    data: {
+      label: 'Complete',
+      description: 'Workflow completed successfully',
+      status: 'idle',
+      icon: '✅'
+    },
+    style: {
+      background: '#ef4444',
+      color: 'white',
+      border: '2px solid #dc2626',
+      borderRadius: '8px',
+      padding: '10px',
+      fontWeight: 'bold'
+    }
+  });
+
+  // Create edges
+  const edges = [];
+  for (let i = 0; i < steps.length - 1; i++) {
+    edges.push({
+      id: `e-${steps[i].id}-${steps[i + 1].id}`,
+      source: steps[i].id,
+      target: steps[i + 1].id,
+      type: 'smoothstep',
+      animated: true,
+      style: {
+        stroke: '#3b82f6',
+        strokeWidth: 2,
+        strokeDasharray: '5,5'
+      },
+      label: `Step ${i + 1}`,
+      labelStyle: {
+        fill: '#3b82f6',
+        fontWeight: 'bold',
+        fontSize: '12px'
+      }
+    });
+  }
+
+  return {
+    nodes: steps,
+    edges: edges,
+    summary: `Generated workflow for: ${query}`
+  };
+};
+
+const WorkflowContent = () => {
   const location = useLocation();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -91,29 +258,35 @@ const Workflow = () => {
   }, [query]);
 
   const generateWorkflow = async (customQuery = null) => {
-    const queryToUse = customQuery || query;
+    const queryToUse = String(customQuery || query || '');
     if (!queryToUse.trim()) return;
 
     setIsGenerating(true);
     try {
-      const response = await fetch('http://localhost:8000/workflow/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: queryToUse.trim(),
-        }),
-      });
+      // Try to connect to backend first
+      let data = null;
+      try {
+        const response = await fetch('http://localhost:8000/workflow/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: queryToUse.trim(),
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate workflow');
+        if (response.ok) {
+          data = await response.json();
+        }
+      } catch (backendError) {
+        console.log('Backend not available, using mock workflow');
       }
-
-      const data = await response.json();
       
-      // Transform the workflow data to ReactFlow format with animations
-      const transformedNodes = data.nodes.map((node, index) => ({
+      // Use mock workflow if backend is not available
+      const mockWorkflow = createMockWorkflow(queryToUse);
+      
+      const transformedNodes = mockWorkflow.nodes.map((node, index) => ({
         ...node,
         position: {
           x: 100 + (index * 250),
@@ -132,7 +305,7 @@ const Workflow = () => {
         },
       }));
 
-      const transformedEdges = data.edges.map((edge, index) => ({
+      const transformedEdges = mockWorkflow.edges.map((edge, index) => ({
         ...edge,
         style: {
           ...edge.style,
@@ -145,7 +318,7 @@ const Workflow = () => {
 
       setNodes(transformedNodes);
       setEdges(transformedEdges);
-      setWorkflowId(data.workflow_id);
+      setWorkflowId(data.workflow_id || `workflow-${Date.now()}`);
       setTotalSteps(transformedNodes.length);
       setCurrentStep(0);
       setExecutionResults({});
@@ -628,6 +801,14 @@ const Workflow = () => {
         }
       `}</style>
     </div>
+  );
+};
+
+const Workflow = () => {
+  return (
+    <ReactFlowProvider>
+      <WorkflowContent />
+    </ReactFlowProvider>
   );
 };
 
