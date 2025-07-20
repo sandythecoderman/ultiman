@@ -1,10 +1,30 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Neo4jGraph from '../components/Neo4jGraph';
+import Chat from '../components/Chat';
 import { 
-  FiSearch, FiGrid, FiList, FiZoomIn, FiZoomOut, FiRefreshCw, 
-  FiSettings, FiFilter, FiEye, FiLayers, FiDatabase, FiX,
-  FiChevronRight, FiChevronLeft, FiMaximize2, FiMinimize2,
-  FiCopy, FiLink, FiClock, FiStar, FiCheck, FiX as FiXIcon
+  FiSearch, 
+  FiLayers, 
+  FiLink, 
+  FiCheckSquare, 
+  FiX, 
+  FiRefreshCw, 
+  FiEye, 
+  FiCopy, 
+  FiMaximize2, 
+  FiMinimize2, 
+  FiZoomIn, 
+  FiZoomOut, 
+  FiRotateCcw, 
+  FiDownload, 
+  FiSettings, 
+  FiList,
+  FiFilter,
+  FiInfo,
+  FiSquare,
+  FiMousePointer,
+  FiDatabase,
+  FiCheck,
+  FiMove
 } from 'react-icons/fi';
 import './KnowledgeBase.css';
 import mockGraphData from '../data/mockGraphData';
@@ -13,19 +33,22 @@ const KnowledgeBase = () => {
   // Core state
   const [graphData, setGraphData] = useState({ nodes: [], edges: [], relationships: [] });
   const [schemaInfo, setSchemaInfo] = useState({ labels: [], relationshipTypes: [] });
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // UI state
   const [selectedNode, setSelectedNode] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [viewType, setViewType] = useState('graph'); // 'graph', 'table', 'tree'
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedNodeTypes, setSelectedNodeTypes] = useState(new Set());
   const [selectedRelTypes, setSelectedRelTypes] = useState(new Set());
-  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
-  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [graphStats, setGraphStats] = useState({ nodes: 0, edges: 0 });
+  const [showInfo, setShowInfo] = useState(false);
+  const [isGraphCleared, setIsGraphCleared] = useState(false);
+  const [messages, setMessages] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
+  const [expandedNodes, setExpandedNodes] = useState(new Set());
 
   // Load mock data
   const loadMockData = () => {
@@ -89,36 +112,109 @@ const KnowledgeBase = () => {
     loadMockData();
   }, []);
 
-  // Filter data based on selections
+  // Simplified filtering logic
   const filteredData = useMemo(() => {
-    if (!graphData.nodes.length) return graphData;
+    if (isGraphCleared) {
+      return { nodes: [], edges: [] };
+    }
+    
+    let filteredNodes = [];
+    let filteredEdges = [];
 
-    const filteredNodes = graphData.nodes.filter(node => 
-      selectedNodeTypes.has(node.category) &&
-      (!searchTerm || node.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    // Step 1: Filter by node types
+    if (selectedNodeTypes.size > 0) {
+      filteredNodes = graphData.nodes.filter(node => selectedNodeTypes.has(node.category));
+    } else {
+      // If no node types selected, show all nodes
+      filteredNodes = graphData.nodes;
+    }
 
-    const nodeIds = new Set(filteredNodes.map(n => n.id));
-    const filteredEdges = graphData.edges.filter(edge =>
-      selectedRelTypes.has(edge.type) &&
-      nodeIds.has(edge.source) &&
-      nodeIds.has(edge.target)
-    );
+    // Step 2: Filter by relationship types (only if both node types and relationship types are selected)
+    if (selectedNodeTypes.size > 0 && selectedRelTypes.size > 0) {
+      // Get IDs of selected nodes
+      const selectedNodeIds = new Set(filteredNodes.map(n => n.id));
+      
+      // Filter relationships by type and ensure at least one end (source or target) is in selected nodes
+      filteredEdges = graphData.edges.filter(edge => 
+        selectedRelTypes.has(edge.type) && 
+        (selectedNodeIds.has(edge.source) || selectedNodeIds.has(edge.target))
+      );
+      
+      // Include all nodes connected by these relationships (both source and target)
+      const connectedNodeIds = new Set();
+      filteredEdges.forEach(edge => {
+        connectedNodeIds.add(edge.source);
+        connectedNodeIds.add(edge.target);
+      });
+      
+      // Add connected nodes to filtered nodes
+      const connectedNodes = graphData.nodes.filter(node => connectedNodeIds.has(node.id));
+      filteredNodes = [...new Set([...filteredNodes, ...connectedNodes])];
+      
+    } else if (selectedNodeTypes.size > 0 && selectedRelTypes.size === 0) {
+      // Only node types selected - show no relationships
+      filteredEdges = [];
+    } else if (selectedNodeTypes.size === 0 && selectedRelTypes.size > 0) {
+      // Only relationship types selected - show all relationships of that type
+      filteredEdges = graphData.edges.filter(edge => selectedRelTypes.has(edge.type));
+      
+      // Include all nodes connected by these relationships
+      const connectedNodeIds = new Set();
+      filteredEdges.forEach(edge => {
+        connectedNodeIds.add(edge.source);
+        connectedNodeIds.add(edge.target);
+      });
+      filteredNodes = graphData.nodes.filter(node => connectedNodeIds.has(node.id));
+    } else {
+      // Nothing selected - show everything
+      filteredNodes = graphData.nodes;
+      filteredEdges = graphData.edges;
+    }
 
-    return {
-      nodes: filteredNodes,
-      edges: filteredEdges,
-      relationships: filteredEdges
+    // Step 3: Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const matchingNodeIds = new Set();
+      
+      filteredNodes.forEach(node => {
+        if (node.name.toLowerCase().includes(query) || 
+            (node.description && node.description.toLowerCase().includes(query))) {
+          matchingNodeIds.add(node.id);
+        }
+      });
+
+      // Filter nodes to only matching ones
+      filteredNodes = filteredNodes.filter(node => matchingNodeIds.has(node.id));
+      
+      // Filter edges to only those connected to matching nodes
+      filteredEdges = filteredEdges.filter(edge => 
+        matchingNodeIds.has(edge.source) || matchingNodeIds.has(edge.target)
+      );
+    }
+
+    // Ensure data structure consistency for Neo4jGraph component
+    const result = { 
+      nodes: filteredNodes, 
+      relationships: filteredEdges  // Neo4jGraph expects 'relationships', not 'edges'
     };
-  }, [graphData, selectedNodeTypes, selectedRelTypes, searchTerm]);
+    
+    console.log(`🔄 Filtered data: ${result.nodes.length} nodes, ${result.relationships.length} relationships`);
+    console.log(`📊 Selected node types: ${Array.from(selectedNodeTypes).join(', ')}`);
+    console.log(`🔗 Selected relationship types: ${Array.from(selectedRelTypes).join(', ')}`);
+    
+    return result;
+  }, [graphData, selectedNodeTypes, selectedRelTypes, searchQuery, isGraphCleared]);
 
   // Toggle functions
   const toggleNodeType = (type) => {
     const newSet = new Set(selectedNodeTypes);
     if (newSet.has(type)) {
       newSet.delete(type);
+      showNotification(`Deselected ${type} nodes`);
     } else {
       newSet.add(type);
+      const count = graphData.nodes.filter(n => n.category === type).length;
+      showNotification(`Selected ${count} ${type} nodes`);
     }
     setSelectedNodeTypes(newSet);
   };
@@ -127,32 +223,114 @@ const KnowledgeBase = () => {
     const newSet = new Set(selectedRelTypes);
     if (newSet.has(type)) {
       newSet.delete(type);
+      showNotification(`Deselected ${type} relationships`);
     } else {
       newSet.add(type);
+      const count = graphData.edges.filter(e => e.type === type).length;
+      showNotification(`Selected ${count} ${type} relationships`);
     }
     setSelectedRelTypes(newSet);
   };
 
-  const selectAllNodeTypes = () => {
-    setSelectedNodeTypes(new Set(schemaInfo.labels));
+  // Node expansion functionality
+  const handleNodeExpansion = (nodeId) => {
+    const newExpandedNodes = new Set(expandedNodes);
+    if (newExpandedNodes.has(nodeId)) {
+      newExpandedNodes.delete(nodeId);
+    } else {
+      newExpandedNodes.add(nodeId);
+    }
+    setExpandedNodes(newExpandedNodes);
   };
 
-  const clearAllNodeTypes = () => {
+  // Utility functions
+  const expandSelectedNodeTypes = () => {
+    const nodesToExpand = graphData.nodes
+      .filter(node => selectedNodeTypes.has(node.category))
+      .map(node => node.id);
+    
+    setExpandedNodes(new Set([...expandedNodes, ...nodesToExpand]));
+    showNotification(`Expanded ${nodesToExpand.length} nodes`);
+  };
+
+  const selectAll = () => {
+    setSelectedNodeTypes(new Set(schemaInfo.labels));
+    showNotification('Selected all node types');
+  };
+
+  const clearAll = () => {
     setSelectedNodeTypes(new Set());
+    setSelectedRelTypes(new Set());
+    showNotification('Cleared all selections');
   };
 
   const selectAllRelTypes = () => {
     setSelectedRelTypes(new Set(schemaInfo.relationshipTypes));
+    showNotification('Selected all relationship types');
   };
 
   const clearAllRelTypes = () => {
     setSelectedRelTypes(new Set());
+    showNotification('Cleared all relationship selections');
   };
 
-  const resetAllFilters = () => {
+  const resetFilters = () => {
     setSelectedNodeTypes(new Set());
     setSelectedRelTypes(new Set());
-    setSearchTerm('');
+    setSearchQuery('');
+    setExpandedNodes(new Set());
+    setIsGraphCleared(false);
+    showNotification('Reset all filters');
+  };
+
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+
+  const refreshGraph = () => {
+    loadMockData();
+    showNotification('Graph refreshed');
+  };
+
+  const fitScreen = () => {
+    // This will be handled by the Neo4jGraph component
+    showNotification('Fitting to screen');
+  };
+
+  const resetZoom = () => {
+    // This will be handled by the Neo4jGraph component
+    showNotification('Reset zoom');
+  };
+
+  const exportGraphData = () => {
+    const dataStr = JSON.stringify(filteredData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'knowledge-graph-data.json';
+    link.click();
+    URL.revokeObjectURL(url);
+    showNotification('Graph data exported');
+  };
+
+  const showGraphInfo = () => {
+    setShowInfo(!showInfo);
+  };
+
+  const zoomIn = () => {
+    // This will be handled by the Neo4jGraph component
+    showNotification('Zoomed in');
+  };
+
+  const zoomOut = () => {
+    // This will be handled by the Neo4jGraph component
+    showNotification('Zoomed out');
+  };
+
+  const fitToScreen = () => {
+    // This will be handled by the Neo4jGraph component
+    showNotification('Fitted to screen');
   };
 
   const copyNodeId = () => {
@@ -168,34 +346,37 @@ const KnowledgeBase = () => {
     setTimeout(() => setShowNotifications(false), 3000);
   };
 
-  const getViewIcon = (type) => {
-    switch (type) {
-      case 'graph': return <FiGrid />;
-      case 'table': return <FiList />;
-      case 'tree': return <FiLayers />;
-      default: return <FiGrid />;
-    }
+  const getNodeTypeColor = (type) => {
+    const colors = {
+      'module': '#3B82F6',
+      'feature': '#10B981',
+      'entity': '#F59E0B',
+      'workflow': '#8B5CF6',
+      'default': '#6B7280'
+    };
+    return colors[type] || colors.default;
   };
 
-  // Node type colors
-  const getNodeTypeColor = (type) => {
-    if (!type || typeof type !== 'string') {
-      return '#6b7280'; // Default gray color
-    }
-    
-    const colors = {
-      'module': '#6366f1',     // Indigo - Core system modules
-      'feature': '#10b981',    // Emerald - Feature functionality  
-      'entity': '#f59e0b',     // Amber - Data entities
-      'workflow': '#ef4444',   // Red - Process workflows
-      'user': '#8b5cf6',       // Purple - User-related
-      'document': '#06b6d4',   // Cyan - Documentation
-      'system': '#84cc16',     // Lime - System components
-      'process': '#ec4899',    // Pink - Business processes
-      'data': '#3b82f6',       // Blue - Data objects
-      'api': '#f97316'         // Orange - API endpoints
+  const handleSendMessage = async (message) => {
+    // Add user message
+    const userMessage = {
+      id: Date.now(),
+      text: message,
+      sender: 'user',
+      timestamp: new Date()
     };
-    return colors[type.toLowerCase()] || '#6b7280';
+    setMessages(prev => [...prev, userMessage]);
+
+    // Simulate AI response
+    setTimeout(() => {
+      const aiResponse = {
+        id: Date.now() + 1,
+        text: `I can help you explore the knowledge graph. I found ${filteredData.nodes.length} nodes and ${filteredData.relationships.length} relationships. What would you like to know?`,
+        sender: 'ai',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, aiResponse]);
+    }, 1000);
   };
 
   if (isLoading) {
@@ -223,177 +404,163 @@ const KnowledgeBase = () => {
   }
 
   return (
-    <div className="kb-container">
-
-      {/* Floating Left Panel */}
-      <div 
-        className={`kb-floating-panel kb-left-panel ${isLeftPanelOpen ? 'open' : 'collapsed'}`}
-        onWheel={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="kb-panel-header">
-          <h3><FiGrid /> Explorer</h3>
-          <button 
-            className="kb-panel-close"
-            onClick={() => setIsLeftPanelOpen(false)}
-            title="Collapse panel"
-          >
-            <FiChevronLeft />
-          </button>
+    <div className={`kb-container ${isFullscreen ? 'graph-fullscreen' : ''}`}>
+      {/* Left Panel - Explorer */}
+      <div className="kb-left-panel">
+        {/* Search Section */}
+        <div className="kb-search-section">
+          <div className="kb-search-container">
+            <FiSearch className="kb-search-icon" />
+            <input
+              type="text"
+              className="kb-search-input"
+              placeholder="Search nodes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          
+          {/* Quick Actions */}
+          <div className="kb-quick-actions">
+            <button className="kb-action-btn" onClick={selectAll}>
+              <FiCheckSquare />
+              All
+            </button>
+            <button className="kb-action-btn" onClick={clearAll}>
+              <FiX />
+              Clear
+            </button>
+            <button className="kb-action-btn" onClick={resetFilters}>
+              <FiRefreshCw />
+              Reset
+            </button>
+          </div>
         </div>
 
-        <div 
-          className="kb-panel-content"
-          onWheel={(e) => {
-            // Prevent scroll events from reaching the graph
-            e.stopPropagation();
-          }}
-          onMouseDown={(e) => {
-            // Prevent mouse events from reaching the graph
-            e.stopPropagation();
-          }}
-        >
-          {/* Search */}
-          <div className="kb-section">
-            <div className="kb-search-container">
-              <FiSearch className="kb-search-icon" />
-              <input
-                type="text"
-                className="kb-search-input"
-                placeholder="Search nodes..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              {searchTerm && (
-                <button 
-                  className="kb-search-clear"
-                  onClick={() => setSearchTerm('')}
-                  title="Clear search"
-                >
-                  <FiX size={14} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="kb-section">
-            <div className="kb-quick-actions">
-              <button 
-                className="kb-quick-btn"
-                onClick={selectAllNodeTypes}
-                title="Select all node types"
-              >
-                <FiCheck size={14} /> All
-              </button>
-              <button 
-                className="kb-quick-btn"
-                onClick={clearAllNodeTypes}
-                title="Clear all node types"
-              >
-                <FiXIcon size={14} /> Clear
-              </button>
-              <button 
-                className="kb-quick-btn"
-                onClick={resetAllFilters}
-                title="Reset all filters"
-              >
-                <FiRefreshCw size={14} /> Reset
-              </button>
-            </div>
-          </div>
-
+        {/* Filter Sections */}
+        <div className="kb-filter-section">
           {/* Node Types */}
-          <div className="kb-section">
-            <div className="kb-section-header">
-              <label className="kb-section-title">
-                Node Types 
-                <span className="kb-filter-count">
-                  ({selectedNodeTypes.size}/{schemaInfo.labels.length})
-                </span>
-              </label>
-            </div>
-            <div className="kb-segmented-control">
-              {schemaInfo.labels.map(label => {
-                const count = graphData.nodes.filter(n => n.category === label).length;
-                const isSelected = selectedNodeTypes.has(label);
-                return (
-                  <button
-                    key={label}
-                    className={`kb-segment ${isSelected ? 'selected' : ''}`}
-                    onClick={() => toggleNodeType(label)}
-                    style={{ 
-                      '--segment-color': getNodeTypeColor(label)
-                    }}
-                    title={`${label} (${count} nodes)`}
-                  >
-                    <span className="kb-segment-label">{label}</span>
-                    <span className="kb-segment-count">{count}</span>
-                  </button>
-                );
-              })}
-            </div>
+          <div className="kb-section-header">
+            <label className="kb-section-title">
+              <FiLayers className="kb-section-icon" />
+              Node Types
+              <span className="kb-filter-count">
+                ({selectedNodeTypes.size}/{schemaInfo.labels.length})
+              </span>
+            </label>
+          </div>
+          <div className="kb-segmented-control">
+            {schemaInfo.labels.map(type => {
+              const count = graphData.nodes.filter(n => n.category === type).length;
+              const isSelected = selectedNodeTypes.has(type);
+              const color = getNodeTypeColor(type);
+              return (
+                <button
+                  key={type}
+                  className={`kb-segment ${isSelected ? 'selected' : ''}`}
+                  onClick={() => toggleNodeType(type)}
+                  title={`${type} (${count} nodes)`}
+                  style={{ '--segment-color': color }}
+                >
+                  <span className="kb-segment-label">{type}</span>
+                  <span className="kb-segment-count">{count}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Relationship Types */}
-          <div className="kb-section">
-            <div className="kb-section-header">
-              <label className="kb-section-title">
-                Relationships
-                <span className="kb-filter-count">
-                  ({selectedRelTypes.size}/{schemaInfo.relationshipTypes.length})
-                </span>
-              </label>
-            </div>
-            <div className="kb-segmented-control">
-              {schemaInfo.relationshipTypes.map(type => {
-                const count = graphData.edges.filter(e => e.type === type).length;
-                const isSelected = selectedRelTypes.has(type);
-                return (
-                  <button
-                    key={type}
-                    className={`kb-segment relationship ${isSelected ? 'selected' : ''}`}
-                    onClick={() => toggleRelType(type)}
-                    title={`${type} (${count} relationships)`}
-                  >
-                    <span className="kb-segment-label">{type}</span>
-                    <span className="kb-segment-count">{count}</span>
-                  </button>
-                );
-              })}
-            </div>
+          <div className="kb-section-header">
+            <label className="kb-section-title">
+              <FiLink className="kb-section-icon" />
+              Relationships
+              <span className="kb-filter-count">
+                ({selectedRelTypes.size}/{schemaInfo.relationshipTypes.length})
+              </span>
+            </label>
+          </div>
+          <div className="kb-segmented-control">
+            {schemaInfo.relationshipTypes.map(type => {
+              const count = graphData.edges.filter(e => e.type === type).length;
+              const isSelected = selectedRelTypes.has(type);
+              return (
+                <button
+                  key={type}
+                  className={`kb-segment relationship ${isSelected ? 'selected' : ''}`}
+                  onClick={() => toggleRelType(type)}
+                  title={`${type} (${count} relationships)`}
+                >
+                  <span className="kb-segment-label">{type}</span>
+                  <span className="kb-segment-count">{count}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Main Graph Area */}
+      {/* Center Graph Area */}
       <div className="kb-main-area">
         {/* Top Toolbar */}
-        <div 
-          className="kb-toolbar"
-          onWheel={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
+        <div className="kb-toolbar">
           <div className="kb-toolbar-left">
             <div className="kb-stats">
               <span className="kb-stat">
                 <strong>Nodes:</strong> {filteredData.nodes.length}
               </span>
               <span className="kb-stat">
-                <strong>Links:</strong> {filteredData.edges.length}
+                <strong>Links:</strong> {filteredData.relationships.length}
               </span>
+            </div>
+            
+            <div className="kb-toolbar-divider"></div>
+            
+            <div className="kb-toolbar-group">
+              <button 
+                className="kb-toolbar-btn secondary"
+                onClick={refreshGraph}
+                title="Refresh graph"
+              >
+                <FiRefreshCw />
+              </button>
+              <button 
+                className="kb-toolbar-btn secondary"
+                onClick={fitScreen}
+                title="Fit to screen"
+              >
+                <FiMove />
+              </button>
+              <button 
+                className="kb-toolbar-btn secondary"
+                onClick={resetZoom}
+                title="Reset zoom"
+              >
+                <FiRotateCcw />
+              </button>
             </div>
           </div>
           
-          <div className="kb-toolbar-center">
-            <button className="kb-toolbar-btn compact" onClick={loadMockData} title="Refresh data">
-              Refresh
+          <div className="kb-toolbar-right">
+            <button 
+              className="kb-toolbar-btn secondary"
+              onClick={exportGraphData}
+              title="Export graph data"
+            >
+              <FiDownload />
             </button>
-            <button className="kb-toolbar-btn compact" onClick={() => window.dispatchEvent(new CustomEvent('fitToScreen'))} title="Fit to screen">
-              Fit Screen
+            <button 
+              className="kb-toolbar-btn secondary"
+              onClick={() => setShowInfo(!showInfo)}
+              title="Graph information"
+            >
+              <FiInfo />
             </button>
-            <button className="kb-toolbar-btn compact" onClick={() => window.dispatchEvent(new CustomEvent('resetZoom'))} title="Reset zoom">
-              Reset Zoom
+            <button 
+              className="kb-toolbar-btn fullscreen"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            >
+              {isFullscreen ? <FiMinimize2 /> : <FiMaximize2 />}
             </button>
           </div>
         </div>
@@ -403,60 +570,97 @@ const KnowledgeBase = () => {
           <Neo4jGraph 
             data={filteredData}
             onNodeSelect={setSelectedNode}
-            viewType={viewType}
+            expandedNodes={expandedNodes}
+            onNodeExpansion={handleNodeExpansion}
           />
           
-          {/* Corner Panel Buttons */}
-          {!isLeftPanelOpen && (
-            <button 
-              className="kb-corner-btn kb-corner-left"
-              onClick={() => setIsLeftPanelOpen(true)}
-              title="Open Knowledge Explorer"
-            >
-              <FiGrid size={18} />
-            </button>
-          )}
-
-          {!isRightPanelOpen && (
-            <button 
-              className="kb-corner-btn kb-corner-right"
-              onClick={() => setIsRightPanelOpen(true)}
-              title="Open Node Details"
-            >
-              <FiEye size={18} />
-            </button>
+          {/* Info Panel */}
+          {showInfo && (
+            <div className="kb-info-panel">
+              <div className="kb-info-header">
+                <h4><FiInfo /> Graph Information</h4>
+                <button className="kb-info-close" onClick={() => setShowInfo(false)}>
+                  <FiX />
+                </button>
+              </div>
+              <div className="kb-info-content">
+                <div className="kb-info-section">
+                  <h5>Statistics</h5>
+                  <div className="kb-info-stats">
+                    <div className="kb-info-stat">
+                      <span className="kb-info-label">Total Nodes:</span>
+                      <span className="kb-info-value">{graphData.nodes.length}</span>
+                    </div>
+                    <div className="kb-info-stat">
+                      <span className="kb-info-label">Total Relationships:</span>
+                      <span className="kb-info-value">{graphData.edges.length}</span>
+                    </div>
+                    <div className="kb-info-stat">
+                      <span className="kb-info-label">Node Types:</span>
+                      <span className="kb-info-value">{schemaInfo.labels.length}</span>
+                    </div>
+                    <div className="kb-info-stat">
+                      <span className="kb-info-label">Relationship Types:</span>
+                      <span className="kb-info-value">{schemaInfo.relationshipTypes.length}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="kb-info-section">
+                  <h5>Current View</h5>
+                  <div className="kb-info-details">
+                    <div className="kb-info-detail">
+                      <span className="kb-info-label">View Mode:</span>
+                      <span className="kb-info-value">
+                        {selectedNodeTypes.size > 0 && selectedRelTypes.size > 0 ? 'Nodes + Relationships' :
+                         selectedNodeTypes.size > 0 ? 'Nodes Only' :
+                         selectedRelTypes.size > 0 ? 'Relationships Only' : 'All Data'}
+                      </span>
+                    </div>
+                    <div className="kb-info-detail">
+                      <span className="kb-info-label">Filtered Nodes:</span>
+                      <span className="kb-info-value">{filteredData.nodes.length}</span>
+                    </div>
+                    <div className="kb-info-detail">
+                      <span className="kb-info-label">Filtered Relationships:</span>
+                      <span className="kb-info-value">{filteredData.relationships.length}</span>
+                    </div>
+                    <div className="kb-info-detail">
+                      <span className="kb-info-label">Search Query:</span>
+                      <span className="kb-info-value">{searchQuery || 'None'}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="kb-info-section">
+                  <h5>Controls</h5>
+                  <div className="kb-info-controls">
+                    <div className="kb-info-control">
+                      <FiMousePointer />
+                      <span>Click nodes to view details</span>
+                    </div>
+                    <div className="kb-info-control">
+                      <FiMaximize2 />
+                      <span>Drag to pan, scroll to zoom</span>
+                    </div>
+                    <div className="kb-info-control">
+                      <FiDatabase />
+                      <span>Use toolbar to control view</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Floating Right Panel */}
-      <div 
-        className={`kb-floating-panel kb-right-panel ${isRightPanelOpen ? 'open' : 'collapsed'}`}
-        onWheel={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
+      {/* Right Panel - Node Details */}
+      <div className="kb-floating-panel kb-right-panel">
         <div className="kb-panel-header">
           <h3><FiEye /> Details</h3>
-          <button 
-            className="kb-panel-close"
-            onClick={() => setIsRightPanelOpen(false)}
-            title="Collapse panel"
-          >
-            <FiChevronRight />
-          </button>
         </div>
-
-        <div 
-          className="kb-panel-content"
-          onWheel={(e) => {
-            // Prevent scroll events from reaching the graph
-            e.stopPropagation();
-          }}
-          onMouseDown={(e) => {
-            // Prevent mouse events from reaching the graph
-            e.stopPropagation();
-          }}
-        >
+        <div className="kb-panel-content">
           {selectedNode ? (
             <div className="kb-node-details">
               <div className="kb-node-header">
@@ -543,7 +747,7 @@ const KnowledgeBase = () => {
                       <span>Expand View</span>
                     </button>
                     <button className="kb-action-btn" title="Add to favorites">
-                      <FiStar size={14} /> 
+                      <FiCheck size={14} /> 
                       <span>Add to Favorites</span>
                     </button>
                   </div>
@@ -553,7 +757,7 @@ const KnowledgeBase = () => {
                 {Object.keys(selectedNode.properties || {}).length > 0 && (
                   <div className="kb-detail-section">
                     <h5 className="kb-section-title">
-                      <FiGrid size={16} />
+                      <FiDatabase size={16} />
                       Technical Properties
                     </h5>
                     <div className="kb-properties-list">
@@ -596,7 +800,7 @@ const KnowledgeBase = () => {
                     </div>
                   </div>
                   <div className="kb-feature-item">
-                    <FiGrid size={16} />
+                    <FiDatabase size={16} />
                     <div>
                       <strong>Technical Properties</strong>
                       <span>Detailed attributes and metadata</span>
