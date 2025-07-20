@@ -1,0 +1,14 @@
+[
+  {
+    "agent_name": "test-agent",
+    "model_id": "google/gemini-2.5-flash-lite-preview-06-17",
+    "agent_id": "agent-001",
+    "openrouter_api_key": "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"
+  },
+  {
+    "agent_name": "RAG-agent",
+    "model_id": "google/gemini-2.5-flash-lite-preview-06-17",
+    "agent_id": "agent-002",
+    "openrouter_api_key": "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"
+  }
+] 

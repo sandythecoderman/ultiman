@@ -1,933 +1,632 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import ReactFlow, {
-  ReactFlowProvider,
   addEdge,
   useNodesState,
   useEdgesState,
   Controls,
   Background,
-  applyNodeChanges,
-  applyEdgeChanges,
+  MiniMap,
+  useReactFlow,
+  getBezierPath,
+  getSmoothStepPath,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import './Workflow.css';
-import NodeProperties from '../components/NodeProperties';
-import AnalysisResults from '../components/AnalysisResults';
-import Chat from '../components/Chat';
-import CustomNode from '../components/CustomNode';
-import EmptyWorkflow from '../components/EmptyWorkflow';
-import ContextMenu from '../components/ContextMenu';
-import NodeTemplates from '../components/NodeTemplates';
-import { WORKFLOW_GENERATE_ENDPOINT } from '../config';
-import { 
-  FiMaximize, 
-  FiMinimize, 
-  FiDownload, 
-  FiSettings, 
-  FiPlay,
-  FiX,
-  FiGrid,
-  FiMoreHorizontal
-} from 'react-icons/fi';
+
+import CustomNode from '../components/CustomNode.jsx';
+import NodeTemplates from '../components/NodeTemplates.jsx';
+import Sidebar from '../components/Sidebar.jsx';
+import DynamicForm from '../components/DynamicForm.jsx';
+import EmptyWorkflow from '../components/EmptyWorkflow.jsx';
+import AnalysisResults from '../components/AnalysisResults.jsx';
+import CommandPalette from '../components/CommandPalette.jsx';
 
 const nodeTypes = {
-  start: CustomNode,
-  execute: CustomNode,
-  process: CustomNode,
-  end: CustomNode,
-  default: CustomNode,
+  custom: CustomNode,
 };
 
 const Workflow = () => {
-  const [nodes, setNodes] = useState([
-    {
-      id: 'start-1',
-      type: 'start',
-      position: { x: 100, y: 100 },
-      data: { 
-        label: 'Start Process',
-        description: 'Initialize the workflow',
-        status: 'completed'
-      }
-    },
-    {
-      id: 'process-1',
-      type: 'process',
-      position: { x: 300, y: 100 },
-      data: { 
-        label: 'Data Validation',
-        description: 'Validate incoming data format',
-        status: 'running'
-      }
-    },
-    {
-      id: 'execute-1',
-      type: 'execute',
-      position: { x: 500, y: 100 },
-      data: { 
-        label: 'API Call',
-        description: 'Execute external API request',
-        status: 'pending'
-      }
-    },
-    {
-      id: 'process-2',
-      type: 'process',
-      position: { x: 200, y: 250 },
-      data: { 
-        label: 'Error Handling',
-        description: 'Handle validation errors',
-        status: 'idle'
-      }
-    },
-    {
-      id: 'process-3',
-      type: 'process',
-      position: { x: 400, y: 250 },
-      data: { 
-        label: 'Data Transform',
-        description: 'Transform API response data',
-        status: 'idle'
-      }
-    },
-    {
-      id: 'execute-2',
-      type: 'execute',
-      position: { x: 600, y: 250 },
-      data: { 
-        label: 'Save Results',
-        description: 'Store processed data',
-        status: 'idle'
-      }
-    },
-    {
-      id: 'end-1',
-      type: 'end',
-      position: { x: 400, y: 400 },
-      data: { 
-        label: 'Complete',
-        description: 'Workflow completed successfully',
-        status: 'idle'
-      }
-    }
-  ]);
-  const [edges, setEdges] = useState([
-    {
-      id: 'e1',
-      source: 'start-1',
-      target: 'process-1',
-      label: 'begin',
-      type: 'smoothstep'
-    },
-    {
-      id: 'e2',
-      source: 'process-1',
-      target: 'execute-1',
-      label: 'valid',
-      type: 'smoothstep'
-    },
-    {
-      id: 'e3',
-      source: 'process-1',
-      target: 'process-2',
-      label: 'error',
-      type: 'smoothstep'
-    },
-    {
-      id: 'e4',
-      source: 'execute-1',
-      target: 'process-3',
-      label: 'success',
-      type: 'smoothstep'
-    },
-    {
-      id: 'e5',
-      source: 'process-3',
-      target: 'execute-2',
-      label: 'transform',
-      type: 'smoothstep'
-    },
-    {
-      id: 'e6',
-      source: 'execute-2',
-      target: 'end-1',
-      label: 'saved',
-      type: 'smoothstep'
-    },
-    {
-      id: 'e7',
-      source: 'process-2',
-      target: 'end-1',
-      label: 'handled',
-      type: 'smoothstep'
-    }
-  ]);
-  const [selectedNode, setSelectedNode] = useState(null);
-  const [analysis, setAnalysis] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [presentationMode, setPresentationMode] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [showActions, setShowActions] = useState(false);
-  const [contextMenu, setContextMenu] = useState({
-    visible: false,
-    x: 0,
-    y: 0,
-    type: 'canvas',
-    nodeData: null
-  });
-  const reactFlowWrapper = useRef(null);
   const location = useLocation();
-  const navigate = useNavigate();
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [executionStatus, setExecutionStatus] = useState(null);
+  const [workflowId, setWorkflowId] = useState(null);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [totalSteps, setTotalSteps] = useState(0);
+  const [executionResults, setExecutionResults] = useState({});
+  const [showResults, setShowResults] = useState(false);
+  const [query, setQuery] = useState('');
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  
+  const reactFlowWrapper = useRef(null);
+  const { project } = useReactFlow();
 
-  const onNodesChange = useCallback(
-    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
-    [],
-  );
-  const onEdgesChange = useCallback(
-    (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
-    [],
-  );
+  // Animation state
+  const [animatingNodes, setAnimatingNodes] = useState(new Set());
+  const [animatingEdges, setAnimatingEdges] = useState(new Set());
 
-  const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), []);
-
-  const onNodeClick = (event, node) => {
-    setSelectedNode(node);
-    setAnalysis(null);
-  };
-
-  // Template handlers
-  const handleCreateWorkflow = (templateData) => {
-    setNodes(templateData.nodes);
-    setEdges(templateData.edges);
-    setSelectedNode(null);
-    console.log('Created workflow from template:', templateData.template.name);
-  };
-
-  const handleCreateNode = (nodeData) => {
-    setNodes((nds) => [...nds, nodeData]);
-    setSelectedNode(nodeData);
-    console.log('Created node from template:', nodeData.type);
-  };
-
-  // Presentation mode handlers
-  const togglePresentationMode = () => {
-    setPresentationMode(!presentationMode);
-    if (!presentationMode) {
-      // Entering presentation mode
-      document.body.style.overflow = 'hidden';
-    } else {
-      // Exiting presentation mode
-      document.body.style.overflow = 'auto';
-    }
-  };
-
-  // Context menu handlers
-  const onPaneContextMenu = useCallback((event) => {
-    event.preventDefault();
-    setContextMenu({
-      visible: true,
-      x: event.clientX,
-      y: event.clientY,
-      type: 'canvas',
-      nodeData: null
-    });
-  }, []);
-
-  const onNodeContextMenu = useCallback((event, node) => {
-    event.preventDefault();
-    setContextMenu({
-      visible: true,
-      x: event.clientX,
-      y: event.clientY,
-      type: 'node',
-      nodeData: node
-    });
-  }, []);
-
-  const closeContextMenu = useCallback(() => {
-    setContextMenu(prev => ({ ...prev, visible: false }));
-  }, []);
-
-  // Generate unique node ID
-  const generateNodeId = () => {
-    return `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  };
-
-  // Auto-layout algorithm using force-directed positioning
-  const autoLayout = useCallback(() => {
-    if (nodes.length === 0) return;
-
-    const nodeWidth = 200;
-    const nodeHeight = 80;
-    const padding = 100;
-
-    // Simple grid layout for demo
-    const cols = Math.ceil(Math.sqrt(nodes.length));
-    const newNodes = nodes.map((node, index) => {
-      const row = Math.floor(index / cols);
-      const col = index % cols;
-      
-      return {
-        ...node,
-        position: {
-          x: col * (nodeWidth + padding),
-          y: row * (nodeHeight + padding)
-        }
-      };
-    });
-
-    setNodes(newNodes);
-  }, [nodes]);
-
-  // Export workflow as image
-  const exportAsImage = useCallback(() => {
-    // Create a simple workflow export for demo
-    const workflowData = {
-      nodes: nodes.map(node => ({
-        id: node.id,
-        type: node.type,
-        label: node.data.label,
-        position: node.position
-      })),
-      edges: edges.map(edge => ({
-        source: edge.source,
-        target: edge.target
-      })),
-      exportedAt: new Date().toISOString()
-    };
-
-    const blob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `workflow-export-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [nodes, edges]);
-
-  // Context menu action handler
-  const handleContextAction = useCallback((action, data) => {
-    console.log('Context action:', action, data);
-
-    switch (action) {
-      case 'create-node':
-        const newNode = {
-          id: generateNodeId(),
-          type: data.type,
-          position: { 
-            x: contextMenu.x - (presentationMode ? 0 : 300), // Adjust for panel offset
-            y: contextMenu.y - 100 
-          },
-          data: { 
-            label: `${data.type.charAt(0).toUpperCase() + data.type.slice(1)} Node` 
-          }
-        };
-        setNodes((nds) => [...nds, newNode]);
-        break;
-
-      case 'duplicate-node':
-        if (data.nodeData) {
-          const duplicatedNode = {
-            ...data.nodeData,
-            id: generateNodeId(),
-            position: {
-              x: data.nodeData.position.x + 50,
-              y: data.nodeData.position.y + 50
-            },
-            data: {
-              ...data.nodeData.data,
-              label: `${data.nodeData.data.label} (Copy)`
-            }
-          };
-          setNodes((nds) => [...nds, duplicatedNode]);
-        }
-        break;
-
-      case 'delete-node':
-        if (data.nodeData) {
-          setNodes((nds) => nds.filter(node => node.id !== data.nodeData.id));
-          setEdges((eds) => eds.filter(edge => 
-            edge.source !== data.nodeData.id && edge.target !== data.nodeData.id
-          ));
-          if (selectedNode?.id === data.nodeData.id) {
-            setSelectedNode(null);
-          }
-        }
-        break;
-
-      case 'edit-node':
-        if (data.nodeData) {
-          setSelectedNode(data.nodeData);
-        }
-        break;
-
-      case 'test-node':
-        if (data.nodeData) {
-          console.log('Testing node:', data.nodeData.id);
-          // Simulate node testing with status update
-          setNodes((nds) => nds.map(node => 
-            node.id === data.nodeData.id 
-              ? { ...node, data: { ...node.data, status: 'running' } }
-              : node
-          ));
-          
-          // Simulate test completion after 2 seconds
-          setTimeout(() => {
-            setNodes((nds) => nds.map(node => 
-              node.id === data.nodeData.id 
-                ? { ...node, data: { ...node.data, status: 'completed' } }
-                : node
-            ));
-          }, 2000);
-        }
-        break;
-
-      case 'export-config':
-        if (data.nodeData) {
-          const nodeConfig = {
-            id: data.nodeData.id,
-            type: data.nodeData.type,
-            data: data.nodeData.data,
-            position: data.nodeData.position
-          };
-          const blob = new Blob([JSON.stringify(nodeConfig, null, 2)], { type: 'application/json' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `node-${data.nodeData.id}-config.json`;
-          a.click();
-          URL.revokeObjectURL(url);
-        }
-        break;
-
-      case 'auto-layout':
-        autoLayout();
-        break;
-
-      case 'export-image':
-        exportAsImage();
-        break;
-
-      case 'quick-connect':
-        if (data.nodeData) {
-          // Find the next available node to connect to
-          const availableNodes = nodes.filter(node => 
-            node.id !== data.nodeData.id && 
-            !edges.some(edge => edge.source === data.nodeData.id && edge.target === node.id)
-          );
-          
-          if (availableNodes.length > 0) {
-            const targetNode = availableNodes[0];
-            const newEdge = {
-              id: `edge-${Date.now()}`,
-              source: data.nodeData.id,
-              target: targetNode.id,
-              label: 'connects',
-              type: 'smoothstep'
-            };
-            setEdges(eds => [...eds, newEdge]);
-            console.log('Quick connected:', data.nodeData.id, 'to', targetNode.id);
-          } else {
-            console.log('No available nodes to connect to');
-          }
-        }
-        break;
-
-      default:
-        console.log('Unknown action:', action);
-    }
-  }, [contextMenu, nodes, selectedNode, autoLayout, exportAsImage, presentationMode]);
-
-  // Keyboard shortcuts
+  // Handle initial query from navigation
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      // Ignore if typing in input fields
-      if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-        return;
-      }
+    if (location.state?.initialQuery) {
+      setQuery(location.state.initialQuery);
+      // Auto-generate workflow if query is provided
+      setTimeout(() => {
+        generateWorkflow(location.state.initialQuery);
+      }, 500);
+    }
+    
+    if (location.state?.workflowData) {
+      // Use pre-generated workflow data
+      const { nodes: workflowNodes, edges: workflowEdges } = location.state.workflowData;
+      setNodes(workflowNodes);
+      setEdges(workflowEdges);
+    }
+  }, [location.state]);
 
-      const isCtrl = event.ctrlKey || event.metaKey;
-      
-      switch (event.key) {
-        case '1':
-          if (!isCtrl) {
-            handleContextAction('create-node', { type: 'start' });
-            event.preventDefault();
-          }
-          break;
-        case '2':
-          if (!isCtrl) {
-            handleContextAction('create-node', { type: 'execute' });
-            event.preventDefault();
-          }
-          break;
-        case '3':
-          if (!isCtrl) {
-            handleContextAction('create-node', { type: 'process' });
-            event.preventDefault();
-          }
-          break;
-        case '4':
-          if (!isCtrl) {
-            handleContextAction('create-node', { type: 'end' });
-            event.preventDefault();
-          }
-          break;
-        case 'l':
-        case 'L':
-          if (event.shiftKey) {
-            autoLayout();
-            event.preventDefault();
-          }
-          break;
-        case 't':
-        case 'T':
-          if (isCtrl) {
-            setShowTemplates(true);
-            event.preventDefault();
-          }
-          break;
-        case 'd':
-        case 'D':
-          if (isCtrl && selectedNode) {
-            handleContextAction('duplicate-node', { nodeData: selectedNode });
-            event.preventDefault();
-          }
-          break;
-        case 'Delete':
-        case 'Backspace':
-          if (selectedNode && !isCtrl) {
-            handleContextAction('delete-node', { nodeData: selectedNode });
-            event.preventDefault();
-          }
-          break;
-        case 'Escape':
-          if (presentationMode) {
-            togglePresentationMode();
-          } else if (showTemplates) {
-            setShowTemplates(false);
-          } else {
-            setSelectedNode(null);
-            closeContextMenu();
-          }
-          break;
-        case 'F11':
-          togglePresentationMode();
-          event.preventDefault();
-          break;
-        case 'f':
-          if (isCtrl) {
-            togglePresentationMode();
-            event.preventDefault();
-          }
-          break;
-        case 'e':
-          if (isCtrl) {
-            exportAsImage();
-            event.preventDefault();
-          }
-          break;
-        case 'a':
-          if (isCtrl) {
-            // Select all nodes
-            setNodes(nds => nds.map(node => ({ ...node, selected: true })));
-            event.preventDefault();
-          }
-          break;
-        case 'r':
-          if (isCtrl) {
-            // Reset/clear workflow
-            setNodes([]);
-            setEdges([]);
-            setSelectedNode(null);
-            event.preventDefault();
-          }
-          break;
-        case 'z':
-          if (isCtrl && !event.shiftKey) {
-            // Undo functionality placeholder
-            console.log('Undo action');
-            event.preventDefault();
-          }
-          break;
-        case 'y':
-          if (isCtrl) {
-            // Redo functionality placeholder
-            console.log('Redo action');
-            event.preventDefault();
-          }
-          break;
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case 'k':
+            e.preventDefault();
+            setShowCommandPalette(true);
+            break;
+          case 'Enter':
+            e.preventDefault();
+            if (query.trim()) {
+              generateWorkflow();
+            }
+            break;
+        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNode, handleContextAction, autoLayout, closeContextMenu, presentationMode, togglePresentationMode, showTemplates]);
+  }, [query]);
 
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      document.body.style.overflow = 'auto';
-    };
-  }, []);
+  const generateWorkflow = async (customQuery = null) => {
+    const queryToUse = customQuery || query;
+    if (!queryToUse.trim()) return;
 
-  useEffect(() => {
-    const promptFromHome = location.state?.prompt;
-    if (promptFromHome) {
-      const userMessage = { sender: 'user', text: promptFromHome };
+    setIsGenerating(true);
+    try {
+      const response = await fetch('http://localhost:8000/workflow/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: queryToUse.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate workflow');
+      }
+
+      const data = await response.json();
       
-      // Update messages to show the user's prompt
-      setMessages(prev => [...prev, userMessage]);
+      // Transform the workflow data to ReactFlow format with animations
+      const transformedNodes = data.nodes.map((node, index) => ({
+        ...node,
+        position: {
+          x: 100 + (index * 250),
+          y: 100 + (index * 50),
+        },
+        data: {
+          ...node.data,
+          status: node.data.status || 'pending',
+          isAnimating: false,
+        },
+        style: {
+          ...node.style,
+          opacity: 0,
+          transform: 'scale(0.8)',
+          transition: 'all 0.5s ease',
+        },
+      }));
 
-      // Define an async function to call the backend
-      const fetchWorkflow = async () => {
-        try {
-          const agentResponse = await handleSendMessage({ query: promptFromHome });
-          const agentMessage = {
-            sender: 'agent',
-            text: agentResponse.response || 'Sorry, I had trouble understanding that.',
-          };
-          setMessages(prev => [...prev, userMessage, agentMessage]);
-          if (agentResponse.nodes && agentResponse.edges) {
-            setNodes(agentResponse.nodes);
-            setEdges(agentResponse.edges);
-          }
-        } catch (error) {
-           const errorMessage = {
-            sender: 'agent',
-            text: error.message || 'Failed to fetch. Please check the backend logs.',
-            isError: true,
-          };
-          setMessages(prev => [...prev, userMessage, errorMessage]);
-        }
-      };
+      const transformedEdges = data.edges.map((edge, index) => ({
+        ...edge,
+        style: {
+          ...edge.style,
+          opacity: 0,
+          strokeDasharray: edge.animated ? '5,5' : 'none',
+          transition: 'all 0.5s ease',
+        },
+        animated: false,
+      }));
 
-      fetchWorkflow();
-      
-      // Clear the state to prevent re-triggering
-      navigate(location.pathname, { replace: true });
+      setNodes(transformedNodes);
+      setEdges(transformedEdges);
+      setWorkflowId(data.workflow_id);
+      setTotalSteps(transformedNodes.length);
+      setCurrentStep(0);
+      setExecutionResults({});
+
+      // Animate nodes and edges in sequence
+      await animateWorkflowGeneration(transformedNodes, transformedEdges);
+
+    } catch (error) {
+      console.error('Error generating workflow:', error);
+      alert('Failed to generate workflow. Please try again.');
+    } finally {
+      setIsGenerating(false);
     }
-  }, [location, navigate]);
-
-  const handleSendMessage = async (payload) => {
-    const response = await fetch(WORKFLOW_GENERATE_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || `HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    if (data.nodes && data.edges) {
-      setNodes(data.nodes);
-      setEdges(data.edges);
-    }
-
-    return data;
   };
-  
-  const handleNodeDataChange = (newData) => {
-    if (!selectedNode) return;
 
-    setNodes((nds) =>
-      nds.map((n) => {
-        if (n.id === selectedNode.id) {
-          const updatedData = { ...n.data, ...newData };
-          return { ...n, data: updatedData };
+  const animateWorkflowGeneration = async (nodes, edges) => {
+    // Animate nodes appearing one by one
+    for (let i = 0; i < nodes.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      setNodes(prevNodes => 
+        prevNodes.map((node, index) => 
+          index === i 
+            ? {
+                ...node,
+                style: {
+                  ...node.style,
+                  opacity: 1,
+                  transform: 'scale(1)',
+                },
+                data: {
+                  ...node.data,
+                  isAnimating: true,
+                },
+              }
+            : node
+        )
+      );
+
+      // Animate corresponding edge
+      if (i < edges.length) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        setEdges(prevEdges =>
+          prevEdges.map((edge, index) =>
+            index === i
+              ? {
+                  ...edge,
+                  style: {
+                    ...edge.style,
+                    opacity: 1,
+                  },
+                  animated: edge.animated !== false,
+                }
+              : edge
+          )
+        );
+      }
+
+      // Stop animation after a delay
+      setTimeout(() => {
+        setNodes(prevNodes =>
+          prevNodes.map((node, index) =>
+            index === i
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    isAnimating: false,
+                  },
+                }
+              : node
+          )
+        );
+      }, 1000);
+    }
+  };
+
+  const executeWorkflow = async () => {
+    if (!workflowId || nodes.length === 0) return;
+
+    setIsExecuting(true);
+    setExecutionStatus('running');
+    setCurrentStep(0);
+    setExecutionResults({});
+
+    try {
+      const response = await fetch('http://localhost:8000/workflow/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          workflow_id: workflowId,
+          nodes: nodes,
+          edges: edges,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to execute workflow');
+      }
+
+      const data = await response.json();
+      
+      // Start polling for execution status
+      pollExecutionStatus(workflowId);
+
+    } catch (error) {
+      console.error('Error executing workflow:', error);
+      setExecutionStatus('failed');
+      alert('Failed to execute workflow. Please try again.');
+    }
+  };
+
+  const pollExecutionStatus = async (workflowId) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`http://localhost:8000/workflow/status/${workflowId}`);
+        
+        if (response.ok) {
+          const status = await response.json();
+          
+          setCurrentStep(status.current_step);
+          setExecutionResults(status.results || {});
+          
+          // Update node statuses and animations
+          updateNodeStatuses(status.results || {});
+          
+          if (status.status === 'completed' || status.status === 'failed') {
+            setExecutionStatus(status.status);
+            setIsExecuting(false);
+            clearInterval(pollInterval);
+            
+            if (status.status === 'completed') {
+              setShowResults(true);
+            }
+          }
         }
-        return n;
+      } catch (error) {
+        console.error('Error polling execution status:', error);
+        clearInterval(pollInterval);
+        setExecutionStatus('failed');
+        setIsExecuting(false);
+      }
+    }, 1000);
+  };
+
+  const updateNodeStatuses = (results) => {
+    setNodes(prevNodes =>
+      prevNodes.map(node => {
+        const result = results[node.id];
+        if (result) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              status: result.status,
+              result: result.result,
+              error: result.error,
+              isAnimating: result.status === 'running',
+            },
+            style: {
+              ...node.style,
+              ...getNodeStatusStyle(result.status),
+            },
+          };
+        }
+        return node;
+      })
+    );
+
+    // Update edge animations
+    setEdges(prevEdges =>
+      prevEdges.map((edge, index) => {
+        const sourceNode = nodes.find(n => n.id === edge.source);
+        const targetNode = nodes.find(n => n.id === edge.target);
+        
+        if (sourceNode && targetNode) {
+          const sourceResult = results[sourceNode.id];
+          const targetResult = results[targetNode.id];
+          
+          if (sourceResult && sourceResult.status === 'completed') {
+            return {
+              ...edge,
+              style: {
+                ...edge.style,
+                stroke: '#10b981',
+                strokeWidth: 3,
+              },
+              animated: false,
+            };
+          } else if (targetResult && targetResult.status === 'running') {
+            return {
+              ...edge,
+              style: {
+                ...edge.style,
+                stroke: '#3b82f6',
+                strokeWidth: 2,
+              },
+              animated: true,
+            };
+          }
+        }
+        return edge;
       })
     );
   };
 
-  // Presentation mode component
-  if (presentationMode) {
-    return (
-      <div className="wf-presentation-mode">
-        {/* Minimal toolbar */}
-        <div className="wf-presentation-toolbar">
-          <div className="wf-presentation-title">
-            <h2>Workflow Demo</h2>
-            <span>{nodes.length} nodes</span>
-          </div>
-          <div className="wf-presentation-actions">
-            <button onClick={autoLayout} title="Auto Layout">
-              <FiSettings />
-            </button>
-            <button onClick={exportAsImage} title="Export">
-              <FiDownload />
-            </button>
-            <button onClick={togglePresentationMode} title="Exit Presentation (Esc)">
-              <FiX />
-            </button>
-          </div>
-        </div>
+  const getNodeStatusStyle = (status) => {
+    const styles = {
+      pending: {
+        background: '#6b7280',
+        border: '#4b5563',
+      },
+      running: {
+        background: '#3b82f6',
+        border: '#2563eb',
+        boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)',
+      },
+      completed: {
+        background: '#10b981',
+        border: '#059669',
+        boxShadow: '0 0 20px rgba(16, 185, 129, 0.5)',
+      },
+      failed: {
+        background: '#ef4444',
+        border: '#dc2626',
+        boxShadow: '0 0 20px rgba(239, 68, 68, 0.5)',
+      },
+    };
+    return styles[status] || styles.pending;
+  };
 
-        {/* Full-screen workflow */}
-        <div className="wf-presentation-canvas">
-          <ReactFlowProvider>
-            {nodes.length === 0 ? (
-              <div className="wf-presentation-empty">
-                <h3>No Workflow to Display</h3>
-                <p>Exit presentation mode to create your workflow</p>
-              </div>
-            ) : (
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                onNodeClick={onNodeClick}
-                onPaneContextMenu={onPaneContextMenu}
-                onNodeContextMenu={onNodeContextMenu}
-                fitView
-                nodeTypes={nodeTypes}
-              >
-                <Background />
-                <Controls />
-              </ReactFlow>
-            )}
-          </ReactFlowProvider>
-        </div>
+  const onConnect = useCallback(
+    (params) => setEdges((eds) => addEdge(params, eds)),
+    [setEdges],
+  );
 
-        {/* Context Menu */}
-        <ContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          visible={contextMenu.visible}
-          type={contextMenu.type}
-          nodeData={contextMenu.nodeData}
-          onClose={closeContextMenu}
-          onAction={handleContextAction}
-        />
-      </div>
+  const onNodeClick = useCallback((event, node) => {
+    setSelectedNode(node);
+  }, []);
+
+  const onNodeDragStop = useCallback(
+    (event, node, nodes) => {
+      setNodes(nodes);
+    },
+    [setNodes],
+  );
+
+  const onDragOver = useCallback((event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const onDrop = useCallback(
+    (event) => {
+      event.preventDefault();
+
+      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
+      const type = event.dataTransfer.getData('application/reactflow');
+      const position = project({
+        x: event.clientX - reactFlowBounds.left,
+        y: event.clientY - reactFlowBounds.top,
+      });
+
+      const newNode = {
+        id: `${type}-${Date.now()}`,
+        type: 'custom',
+        position,
+        data: {
+          label: type.charAt(0).toUpperCase() + type.slice(1),
+          type: type,
+          status: 'pending',
+        },
+        style: {
+          background: '#3b82f6',
+          color: 'white',
+          border: '2px solid #2563eb',
+          borderRadius: '8px',
+          padding: '10px',
+          fontWeight: 'bold',
+        },
+      };
+
+      setNodes((nds) => nds.concat(newNode));
+    },
+    [project, setNodes],
+  );
+
+  const handleNodeUpdate = useCallback((nodeId, data) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              ...data,
+            },
+          };
+        }
+        return node;
+      })
     );
-  }
+  }, [setNodes]);
+
+  const handleNodeDelete = useCallback((nodeId) => {
+    setNodes((nds) => nds.filter((node) => node.id !== nodeId));
+    setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
+    if (selectedNode?.id === nodeId) {
+      setSelectedNode(null);
+    }
+  }, [setNodes, setEdges, selectedNode]);
+
+  const clearWorkflow = () => {
+    setNodes([]);
+    setEdges([]);
+    setSelectedNode(null);
+    setWorkflowId(null);
+    setCurrentStep(0);
+    setTotalSteps(0);
+    setExecutionResults({});
+    setShowResults(false);
+    setExecutionStatus(null);
+    setQuery('');
+  };
+
+  const getEdgePath = (sourceX, sourceY, targetX, targetY) => {
+    return getSmoothStepPath({
+      sourceX,
+      sourceY,
+      targetX,
+      targetY,
+    });
+  };
+
+  const customEdge = ({ sourceX, sourceY, targetX, targetY, ...props }) => {
+    const [edgePath] = getEdgePath(sourceX, sourceY, targetX, targetY);
+    return (
+      <path
+        d={edgePath}
+        stroke="#3b82f6"
+        strokeWidth={2}
+        fill="none"
+        style={{
+          strokeDasharray: props.animated ? '5,5' : 'none',
+          animation: props.animated ? 'dash 1s linear infinite' : 'none',
+        }}
+      />
+    );
+  };
+
+  const edgeTypes = {
+    custom: customEdge,
+  };
 
   return (
-    <div className="wf-container">
-      {/* Left Panel - Chat */}
-      <div className="wf-floating-panel wf-left-panel">
-        <div className="wf-panel-header">
-          <h3><FiSettings /> AI Assistant</h3>
-          <div className="wf-panel-actions">
-            <button 
-              className="wf-panel-close"
-              onClick={() => setShowActions(!showActions)}
-              title="More actions"
+    <div className="workflow-container">
+      <div className="workflow-header">
+        <div className="workflow-title">
+          <h1>Workflow Builder</h1>
+          <p>Create and execute automated workflows with AI-powered generation</p>
+        </div>
+        
+        <div className="workflow-controls">
+          <div className="query-input-container">
+            <input
+              type="text"
+              placeholder="Describe your workflow (e.g., 'Create 5 users and 3 tickets')"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="query-input"
+              disabled={isGenerating || isExecuting}
+            />
+            <button
+              onClick={generateWorkflow}
+              disabled={!query.trim() || isGenerating || isExecuting}
+              className="generate-btn"
             >
-              <FiMoreHorizontal />
+              {isGenerating ? 'Generating...' : 'Generate Workflow'}
             </button>
-            {showActions && (
-              <div className="wf-actions-dropdown">
-                <button onClick={() => setMessages([])}>Clear Chat</button>
-                <button onClick={() => {
-                  const chatData = {
-                    timestamp: new Date().toISOString(),
-                    messageCount: messages.length,
-                    messages: messages
-                  };
-                  const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `workflow-chat-${Date.now()}.json`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }}>Export</button>
+          </div>
+          
+          {nodes.length > 0 && (
+            <div className="execution-controls">
+              <button
+                onClick={executeWorkflow}
+                disabled={isExecuting}
+                className="execute-btn"
+              >
+                {isExecuting ? 'Executing...' : 'Execute Workflow'}
+              </button>
+              <button onClick={clearWorkflow} className="clear-btn">
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
+
+        {executionStatus && (
+          <div className={`execution-status ${executionStatus}`}>
+            <div className="status-info">
+              <span className="status-text">
+                {executionStatus === 'running' ? 'Executing...' : 
+                 executionStatus === 'completed' ? 'Completed!' : 
+                 executionStatus === 'failed' ? 'Failed!' : 'Unknown'}
+              </span>
+              {executionStatus === 'running' && (
+                <span className="step-info">
+                  Step {currentStep + 1} of {totalSteps}
+                </span>
+              )}
+            </div>
+            {executionStatus === 'running' && (
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill"
+                  style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
+                />
               </div>
             )}
           </div>
-        </div>
-        <div className="wf-panel-content">
-          <Chat
-            messages={messages}
-            onMessagesChange={setMessages}
-            onSendMessage={handleSendMessage}
-            placeholder="Describe the workflow you want to create..."
-          />
-        </div>
+        )}
       </div>
 
-      {/* Center Graph Area */}
-      <div className="wf-main-area">
-        <div className="wf-graph-container">
-        {/* Graph toolbar */}
-        <div className="wf-graph-toolbar">
-          <div className="wf-graph-info">
-            <span>{nodes.length} nodes • {edges.length} connections</span>
-          </div>
-          <div className="wf-graph-actions">
-            <button onClick={() => setShowTemplates(true)} title="Templates (Ctrl+T)">
-              <FiGrid />
-            </button>
-            <button onClick={autoLayout} title="Auto Layout (Shift+L)">
-              <FiSettings />
-            </button>
-            <button onClick={exportAsImage} title="Export (Ctrl+E)">
-              <FiDownload />
-            </button>
-            <button onClick={togglePresentationMode} title="Presentation Mode (Ctrl+F)">
-              <FiMaximize />
-            </button>
-          </div>
-        </div>
-
-        <ReactFlowProvider>
+      <div className="workflow-content">
+        <Sidebar
+          selectedNode={selectedNode}
+          onNodeUpdate={handleNodeUpdate}
+          onNodeDelete={handleNodeDelete}
+        />
+        
+        <div className="workflow-canvas-container" ref={reactFlowWrapper}>
           {nodes.length === 0 ? (
-            <EmptyWorkflow />
+            <EmptyWorkflow onGenerate={generateWorkflow} />
           ) : (
             <ReactFlow
-              ref={reactFlowWrapper}
               nodes={nodes}
               edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
               onNodeClick={onNodeClick}
-              onPaneContextMenu={onPaneContextMenu}
-              onNodeContextMenu={onNodeContextMenu}
-              fitView
+              onNodeDragStop={onNodeDragStop}
+              onDragOver={onDragOver}
+              onDrop={onDrop}
               nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              fitView
+              attributionPosition="bottom-left"
             >
-              <Background />
               <Controls />
+              <Background />
+              <MiniMap />
             </ReactFlow>
           )}
-        </ReactFlowProvider>
         </div>
+
+        {showResults && (
+          <AnalysisResults
+            results={executionResults}
+            onClose={() => setShowResults(false)}
+          />
+        )}
       </div>
 
-      {/* Right Panel - Node Properties */}
-      <div className="wf-floating-panel wf-right-panel">
-        <div className="wf-panel-header">
-          <h3><FiPlay /> Workflow Builder</h3>
-          <button 
-            className="wf-panel-close"
-            onClick={() => {}}
-            title="Collapse panel"
-          >
-            <FiMinimize />
-          </button>
-        </div>
-        <div className="wf-panel-content">
-          {analysis ? (
-            <AnalysisResults analysis={analysis} onClear={() => setAnalysis(null)} />
-          ) : selectedNode ? (
-            <NodeProperties node={selectedNode} onNodeDataChange={handleNodeDataChange} />
-          ) : (
-            <div className="wf-no-selection">
-              <div className="wf-no-selection-icon">
-                <FiPlay size={48} />
-              </div>
-              <h4>Agent Workflow Demo</h4>
-              <p className="wf-no-selection-description">
-                Select any node from the workflow to view its properties and configuration options.
-              </p>
-              
-              <div className="wf-feature-preview">
-                <h5>What you'll see:</h5>
-                <div className="wf-preview-list">
-                  <div className="wf-preview-item">
-                    <FiSettings size={16} />
-                    <div className="wf-preview-content">
-                      <strong>Node Properties</strong>
-                      <span>Configuration and settings</span>
-                    </div>
-                  </div>
-                  <div className="wf-preview-item">
-                    <FiPlay size={16} />
-                    <div className="wf-preview-content">
-                      <strong>Execution Details</strong>
-                      <span>Runtime parameters and outputs</span>
-                    </div>
-                  </div>
-                  <div className="wf-preview-item">
-                    <FiGrid size={16} />
-                    <div className="wf-preview-content">
-                      <strong>Connection Info</strong>
-                      <span>Input/output connections</span>
-                    </div>
-                  </div>
-                  <div className="wf-preview-item">
-                    <FiMaximize size={16} />
-                    <div className="wf-preview-content">
-                      <strong>Quick Actions</strong>
-                      <span>Edit, duplicate, and manage nodes</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="wf-interaction-tips">
-                <div className="wf-tip-item">
-                  <FiSettings size={16} />
-                  <div className="wf-tip-content">
-                    <strong>Click:</strong>
-                    <span>Select and configure nodes</span>
-                  </div>
-                </div>
-                <div className="wf-tip-item">
-                  <FiPlay size={16} />
-                  <div className="wf-tip-content">
-                    <strong>Chat:</strong>
-                    <span>AI-powered workflow generation</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="wf-detail-section">
-                <h5 className="wf-section-title">
-                  <FiGrid size={16} />
-                  Quick Actions
-                </h5>
-                <div className="wf-shortcuts-grid">
-                  <div className="wf-shortcut-item">
-                    <span>Create nodes</span><kbd>1-4</kbd>
-                  </div>
-                  <div className="wf-shortcut-item">
-                    <span>Templates</span><kbd>Ctrl+T</kbd>
-                  </div>
-                  <div className="wf-shortcut-item">
-                    <span>Auto-layout</span><kbd>Shift+L</kbd>
-                  </div>
-                  <div className="wf-shortcut-item">
-                    <span>Presentation</span><kbd>Ctrl+F</kbd>
-                  </div>
-                  <div className="wf-shortcut-item">
-                    <span>Context menu</span><kbd>Right-click</kbd>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Context Menu */}
-      <ContextMenu
-        x={contextMenu.x}
-        y={contextMenu.y}
-        visible={contextMenu.visible}
-        type={contextMenu.type}
-        nodeData={contextMenu.nodeData}
-        onClose={closeContextMenu}
-        onAction={handleContextAction}
+      <CommandPalette
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        onGenerate={generateWorkflow}
+        query={query}
+        setQuery={setQuery}
       />
 
-      {/* Node Templates */}
-      <NodeTemplates
-        visible={showTemplates}
-        onClose={() => setShowTemplates(false)}
-        onCreateWorkflow={handleCreateWorkflow}
-        onCreateNode={handleCreateNode}
-      />
+      <style jsx>{`
+        @keyframes dash {
+          to {
+            stroke-dashoffset: -10;
+          }
+        }
+      `}</style>
     </div>
   );
 };

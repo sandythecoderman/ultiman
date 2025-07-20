@@ -1,0 +1,9 @@
+{
+  "embedding_dimension": 768,
+  "index_type": "FLAT",
+  "metric": "cosine",
+  "nlist": 100,
+  "total_vectors": 1076,
+  "is_trained": false,
+  "timestamp": 1752839698.6358914
+}

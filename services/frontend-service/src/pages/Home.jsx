@@ -754,11 +754,60 @@ function Home() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const centralOrbRef = useRef(null);
 
-  const handlePromptSubmit = (prompt) => {
+  const handlePromptSubmit = async (prompt) => {
     setIsNavigating(true);
-    setTimeout(() => {
-      navigate('/workflow', { state: { prompt } });
-    }, 400);
+    
+    // Check if this is a workflow-related query
+    const workflowKeywords = ['create', 'generate', 'workflow', 'process', 'execute', 'automate', 'user', 'ticket', 'asset', 'event'];
+    const isWorkflowQuery = workflowKeywords.some(keyword => prompt.toLowerCase().includes(keyword));
+    
+    if (isWorkflowQuery) {
+      // Navigate to workflow page with the prompt
+      setTimeout(() => {
+        navigate('/workflow', { state: { initialQuery: prompt } });
+      }, 400);
+    } else {
+      // For non-workflow queries, use the chat endpoint
+      try {
+        const response = await fetch('http://localhost:8000/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: prompt,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Chat response:', data);
+          
+          // If the response includes workflow data, navigate to workflow
+          if (data.nodes && data.edges) {
+            setTimeout(() => {
+              navigate('/workflow', { state: { initialQuery: prompt, workflowData: data } });
+            }, 400);
+          } else {
+            // Show response in a modal or alert
+            alert(`Response: ${data.response}`);
+            setIsNavigating(false);
+          }
+        } else {
+          console.error('Failed to get response');
+          // Navigate to workflow as fallback
+          setTimeout(() => {
+            navigate('/workflow', { state: { initialQuery: prompt } });
+          }, 400);
+        }
+      } catch (error) {
+        console.error('Error processing prompt:', error);
+        // Navigate to workflow as fallback
+        setTimeout(() => {
+          navigate('/workflow', { state: { initialQuery: prompt } });
+        }, 400);
+      }
+    }
   };
 
   const handleSearchExpandedChange = (expanded) => {

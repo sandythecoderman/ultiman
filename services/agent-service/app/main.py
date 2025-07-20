@@ -3,10 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import logging
 import os
-from typing import Optional, Dict
+import uuid
+from typing import Optional, Dict, List, Any
 from app.core.orchestrator import AgentOrchestrator
 from app.tools.knowledge_graph_querier import KnowledgeGraphQuerier
 from app.tools.neo4j_service import neo4j_service
+from app.workflow_engine import workflow_engine, WorkflowExecution
 from fastapi.responses import JSONResponse
 
 # Configure logging
@@ -18,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Ultiman Agent Service",
-    description="Simplified agentic pipeline for Infraon Infinity Platform",
-    version="1.0.0"
+    description="Enhanced agentic pipeline with workflow generation and execution",
+    version="2.0.0"
 )
 
 # Add CORS middleware
@@ -48,9 +50,33 @@ class ChatResponse(BaseModel):
     nodes: Optional[list] = None
     edges: Optional[list] = None
 
+class WorkflowRequest(BaseModel):
+    query: str
+    session_id: Optional[str] = None
+
+class WorkflowResponse(BaseModel):
+    workflow_id: str
+    nodes: List[Dict[str, Any]]
+    edges: List[Dict[str, Any]]
+    summary: str
+    status: str = "generated"
+
+class WorkflowExecutionRequest(BaseModel):
+    workflow_id: str
+    nodes: List[Dict[str, Any]]
+    edges: List[Dict[str, Any]]
+
+class WorkflowExecutionResponse(BaseModel):
+    execution_id: str
+    status: str
+    current_step: int
+    total_steps: int
+    results: Dict[str, Any]
+    message: str
+
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "agent-service"}
+    return {"status": "healthy", "service": "agent-service-v2"}
 
 @app.post("/uploadfile/")
 async def create_upload_file(file: UploadFile = File(...)):
@@ -70,15 +96,149 @@ async def create_upload_file(file: UploadFile = File(...)):
         logger.error(f"❌ Error saving file: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Could not save file: {e}")
 
+@app.post("/workflow/generate", response_model=WorkflowResponse)
+async def generate_workflow(request: WorkflowRequest):
+    """
+    Generate a workflow from a natural language query using the legacy agent.
+    """
+    try:
+        logger.info(f"🚀 Generating workflow for query: {request.query}")
+        
+        # Generate workflow using the new workflow engine
+        workflow_data = workflow_engine.generate_workflow_from_query(request.query)
+        
+        # Create a unique workflow ID
+        workflow_id = str(uuid.uuid4())
+        
+        logger.info(f"✅ Generated workflow {workflow_id} with {len(workflow_data['nodes'])} nodes")
+        
+        return WorkflowResponse(
+            workflow_id=workflow_id,
+            nodes=workflow_data['nodes'],
+            edges=workflow_data['edges'],
+            summary=workflow_data.get('summary', request.query),
+            status="generated"
+        )
+        
+    except Exception as e:
+        logger.error(f"❌ Error generating workflow: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate workflow: {str(e)}")
+
+@app.post("/workflow/execute", response_model=WorkflowExecutionResponse)
+async def execute_workflow(request: WorkflowExecutionRequest):
+    """
+    Execute a workflow with smooth sequential animations.
+    """
+    try:
+        logger.info(f"🚀 Executing workflow: {request.workflow_id}")
+        
+        # Execute the workflow
+        execution = await workflow_engine.execute_workflow(
+            request.workflow_id,
+            request.nodes,
+            request.edges
+        )
+        
+        # Convert execution results to response format
+        results = {}
+        for node in execution.nodes:
+            if node.result:
+                results[node.id] = {
+                    'status': node.status.value,
+                    'result': node.result,
+                    'execution_time': node.execution_time,
+                    'error': node.error
+                }
+        
+        return WorkflowExecutionResponse(
+            execution_id=execution.id,
+            status=execution.status.value,
+            current_step=execution.current_step,
+            total_steps=execution.total_steps,
+            results=results,
+            message=f"Workflow execution {execution.status.value}"
+        )
+        
+    except Exception as e:
+        logger.error(f"❌ Error executing workflow: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to execute workflow: {str(e)}")
+
+@app.get("/workflow/status/{workflow_id}")
+async def get_workflow_status(workflow_id: str):
+    """
+    Get the current status of a workflow execution.
+    """
+    try:
+        execution = workflow_engine.get_execution_status(workflow_id)
+        
+        if not execution:
+            raise HTTPException(status_code=404, detail="Workflow execution not found")
+        
+        # Convert execution to response format
+        results = {}
+        for node in execution.nodes:
+            results[node.id] = {
+                'status': node.status.value,
+                'result': node.result,
+                'execution_time': node.execution_time,
+                'error': node.error
+            }
+        
+        return {
+            'execution_id': execution.id,
+            'status': execution.status.value,
+            'current_step': execution.current_step,
+            'total_steps': execution.total_steps,
+            'start_time': execution.start_time,
+            'end_time': execution.end_time,
+            'results': results
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error getting workflow status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get workflow status: {str(e)}")
+
+@app.post("/workflow/stop/{workflow_id}")
+async def stop_workflow(workflow_id: str):
+    """
+    Stop a workflow execution.
+    """
+    try:
+        workflow_engine.stop_execution(workflow_id)
+        return {"message": f"Workflow {workflow_id} stopped successfully"}
+        
+    except Exception as e:
+        logger.error(f"❌ Error stopping workflow: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to stop workflow: {str(e)}")
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
     """
-    Main chat endpoint that orchestrates the agentic pipeline
+    Enhanced chat endpoint that can generate workflows for workflow-related queries.
     """
     try:
         logger.info(f"🚀 Received query: {request.query}")
         
+        # Check if this is a workflow-related query
+        workflow_keywords = ['create', 'generate', 'workflow', 'process', 'execute', 'automate']
+        is_workflow_query = any(keyword in request.query.lower() for keyword in workflow_keywords)
+        
+        if is_workflow_query:
+            # Generate workflow instead of regular chat response
+            workflow_data = workflow_engine.generate_workflow_from_query(request.query)
+            
+            return ChatResponse(
+                response=f"Generated workflow for: {request.query}",
+                session_id=request.session_id or str(uuid.uuid4()),
+                tools_used=["WorkflowGenerator"],
+                reasoning_steps=["Analyzed query for workflow generation", "Generated workflow steps"],
+                nodes=workflow_data['nodes'],
+                edges=workflow_data['edges']
+            )
+        
+        # Fall back to regular chat processing
         file_path = None
         if request.file_info and 'filename' in request.file_info:
             filename = request.file_info['filename']
@@ -194,7 +354,6 @@ async def stateless_chat_endpoint(request: ChatRequest):
         logger.error(f"❌ Error processing stateless chat request: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-
 class ExpandNodeRequest(BaseModel):
     nodeId: str
 
@@ -252,100 +411,57 @@ async def expand_node(request: ExpandNodeRequest):
                 
                 # Process relationships
                 for rel in relationships:
+                    rel_id = str(rel.id)
+                    rel_type = rel.type
+                    rel_props = dict(rel)
+                    
                     new_edges.append({
-                        "id": str(rel.id),
+                        "id": rel_id,
                         "source": str(rel.start_node.id),
                         "target": str(rel.end_node.id),
-                        "type": rel.type,
-                        "properties": dict(rel)
+                        "type": rel_type,
+                        "properties": rel_props
                     })
-        
-        logger.info(f"✅ Found {len(new_nodes)} new nodes and {len(new_edges)} new edges")
-        
-        return JSONResponse(content={
-            "nodes": new_nodes,
-            "edges": new_edges
-        })
-        
+            
+            logger.info(f"✅ Expanded node {request.nodeId}: {len(new_nodes)} new nodes, {len(new_edges)} new edges")
+            
+            return {
+                "new_nodes": new_nodes,
+                "new_edges": new_edges
+            }
+            
     except Exception as e:
-        logger.error(f"❌ Error expanding node {request.nodeId}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error expanding node: {str(e)}")
+        logger.error(f"❌ Error expanding node: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to expand node: {str(e)}")
+    finally:
+        # Close connection
+        neo4j_service.close()
 
 @app.get("/api/schema-info")
 async def get_schema_info():
     """
-    Get Neo4j schema information including labels and relationship types with counts
+    Get schema information for the knowledge graph
     """
     try:
-        logger.info("🔍 Fetching Neo4j schema information")
+        logger.info("📊 Fetching schema information...")
         
         # Connect to Neo4j
-        if not neo4j_service.driver:
-            neo4j_service.connect()
+        neo4j_service.connect()
         
-        with neo4j_service.driver.session() as session:
-            # Get node labels with counts
-            label_result = session.run("""
-                CALL db.labels() YIELD label
-                CALL apoc.cypher.run(
-                    'MATCH (n:' + label + ') RETURN count(n) as count', 
-                    {}
-                ) YIELD value
-                RETURN label, value.count as count
-            """)
-            
-            labels = []
-            for record in label_result:
-                labels.append({
-                    "name": record["label"],
-                    "count": record["count"]
-                })
-            
-            # Get relationship types with counts  
-            rel_type_result = session.run("""
-                CALL db.relationshipTypes() YIELD relationshipType
-                CALL apoc.cypher.run(
-                    'MATCH ()-[r:' + relationshipType + ']->() RETURN count(r) as count',
-                    {}
-                ) YIELD value
-                RETURN relationshipType, value.count as count
-            """)
-            
-            relationship_types = []
-            for record in rel_type_result:
-                relationship_types.append({
-                    "name": record["relationshipType"],
-                    "count": record["count"]
-                })
+        # Get schema information
+        schema_info = neo4j_service.get_schema_info()
         
-        logger.info(f"✅ Retrieved {len(labels)} labels and {len(relationship_types)} relationship types")
+        logger.info(f"✅ Successfully fetched schema info: {len(schema_info['nodeTypes'])} node types, {len(schema_info['relationshipTypes'])} relationship types")
         
-        return JSONResponse(content={
-            "labels": labels,
-            "relationshipTypes": relationship_types
-        })
+        return JSONResponse(content=schema_info)
         
     except Exception as e:
         logger.error(f"❌ Error fetching schema info: {str(e)}")
-        # Fallback to simple query without APOC if it's not available
-        try:
-            with neo4j_service.driver.session() as session:
-                # Simple label query
-                label_result = session.run("CALL db.labels() YIELD label RETURN label")
-                labels = [{"name": record["label"], "count": 0} for record in label_result]
-                
-                # Simple relationship type query
-                rel_result = session.run("CALL db.relationshipTypes() YIELD relationshipType RETURN relationshipType")
-                relationship_types = [{"name": record["relationshipType"], "count": 0} for record in rel_result]
-                
-                return JSONResponse(content={
-                    "labels": labels,
-                    "relationshipTypes": relationship_types
-                })
-        except Exception as fallback_error:
-            logger.error(f"❌ Fallback schema query failed: {str(fallback_error)}")
-            raise HTTPException(status_code=500, detail=f"Error fetching schema info: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch schema info: {str(e)}")
+    finally:
+        # Close connection
+        neo4j_service.close()
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001) 
+    uvicorn.run(app, host="0.0.0.0", port=8000) 
