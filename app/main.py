@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional
 import time
 import json
 
-from .engine import GeminiRAG
+from engine import GeminiRAG
 
 # --- FastAPI App Initialization ---
 app = FastAPI(
@@ -197,7 +197,7 @@ def handle_workflow_command(request: CommandRequest):
         print(f"Intent: Generate Workflow. Prompt: '{prompt}'")
         # In a real implementation, you would call the LLM for generation
         # For now, we reuse the existing mock generation logic
-        from .mock_data import MOCK_WORKFLOW
+        from mock_data import MOCK_WORKFLOW
         return {"action": "generate", "data": MOCK_WORKFLOW}
 
     # Intent 2: Analysis

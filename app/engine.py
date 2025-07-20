@@ -39,13 +39,13 @@ class GeminiRAG:
             print("Neo4j connection successful.")
             return driver
         except exceptions.ServiceUnavailable as e:
-            print(f"Error connecting to Neo4j: {e}")
-            print("Please ensure the Neo4j container is running and accessible.")
-            exit(1)
+            print(f"Warning: Neo4j not available: {e}")
+            print("Running in mock mode - some features may be limited.")
+            return None
         except exceptions.AuthError as e:
-            print(f"Neo4j authentication failed: {e}")
-            print("Please check your NEO4J_USER and NEO4J_PASSWORD environment variables.")
-            exit(1)
+            print(f"Warning: Neo4j authentication failed: {e}")
+            print("Running in mock mode - some features may be limited.")
+            return None
 
     def _initialize_llm(self):
         """Initializes the Generative AI model using service account credentials."""
@@ -86,6 +86,9 @@ class GeminiRAG:
 
     def _cache_entities(self):
         print("Caching all named entities from the knowledge graph...")
+        if not self.driver:
+            print("No Neo4j connection - using empty entity cache")
+            return set()
         with self.driver.session() as session:
             result = session.run("MATCH (n) WHERE n.name IS NOT NULL RETURN DISTINCT toLower(n.name) AS name")
             # Cache all known entity names in lowercase for faster matching
@@ -107,6 +110,9 @@ class GeminiRAG:
         Traverses the knowledge graph from a starting set of entities to retrieve
         relevant context.
         """
+        if not self.driver:
+            return "Neo4j is not available - running in mock mode."
+        
         if not entities:
             return "No relevant entities found in the knowledge graph."
 
