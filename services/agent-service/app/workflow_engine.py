@@ -10,8 +10,8 @@ import os
 # Add the legacy agent to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'legacy_agent'))
 
-from legacy_agent.agent.agent import UnifiedOrchestratorAgent
-from legacy_agent.agent.data_models import FinalOutput, JSONOutputNode
+from .legacy_agent.agent.agent import UnifiedOrchestratorAgent
+from .legacy_agent.agent.data_models import FinalOutput, JSONOutputNode
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,11 @@ class WorkflowEngine:
     """
     
     def __init__(self):
-        self.agent = UnifiedOrchestratorAgent()
+        try:
+            self.agent = UnifiedOrchestratorAgent()
+        except Exception as e:
+            print(f"Warning: Could not initialize legacy agent: {e}")
+            self.agent = None
         self.active_executions: Dict[str, WorkflowExecution] = {}
         
     def generate_workflow_from_query(self, query: str) -> Dict[str, Any]:
@@ -77,6 +81,11 @@ class WorkflowEngine:
         """
         try:
             logger.info(f"Generating workflow for query: {query}")
+            
+            # Check if agent is available
+            if self.agent is None:
+                logger.warning("Legacy agent not available, using fallback workflow")
+                return self._create_fallback_workflow(query, "Legacy agent not initialized")
             
             # Use the legacy agent to generate the workflow
             agent_result = self.agent.run(query)

@@ -6,8 +6,8 @@ from typing import List
 # Add the parent directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from legacy.llm_client import LLMClient
-from legacy.agent.data_models import SubTask
+from ..llm_client import LLMClient
+from .data_models import SubTask
 
 class TaskDecomposer:
     """

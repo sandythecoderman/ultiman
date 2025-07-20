@@ -4,9 +4,9 @@ import os
 # Add the parent directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from legacy.aag.core.query_engine import QueryEngine
-from legacy.aag.core.reranker import Reranker
-from legacy.aag.core.selector import Selector
+from .core.query_engine import QueryEngine
+from .core.reranker import Reranker
+from .core.selector import Selector
 
 class AAGPipeline:
     """

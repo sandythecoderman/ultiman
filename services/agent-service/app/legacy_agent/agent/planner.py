@@ -6,11 +6,11 @@ from typing import List
 # Add the parent directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from legacy.llm_client import LLMClient
-from legacy.aag.aag_pipeline import AAGPipeline
+from ..llm_client import LLMClient
+from ..aag.aag_pipeline import AAGPipeline
 # Assuming a RAG pipeline class exists, we'll create a placeholder for now
-# from legacy.rag.rag_pipeline import RAGPipeline 
-from legacy.agent.data_models import SubTask, ExecutionPlan, ExecutionStep
+# from ..rag.rag_pipeline import RAGPipeline 
+from .data_models import SubTask, ExecutionPlan, ExecutionStep
 
 # Placeholder for the RAG pipeline
 class RAGPipeline:

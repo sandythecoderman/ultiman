@@ -15,6 +15,17 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import './Workflow.css';
 
+import { 
+  FiSettings, 
+  FiPlay, 
+  FiRefreshCw, 
+  FiGrid, 
+  FiDownload, 
+  FiX, 
+  FiPlus,
+  FiTarget
+} from 'react-icons/fi';
+
 import CustomNode from '../components/CustomNode.jsx';
 import NodeTemplates from '../components/NodeTemplates.jsx';
 import Sidebar from '../components/Sidebar.jsx';
@@ -22,6 +33,9 @@ import DynamicForm from '../components/DynamicForm.jsx';
 import EmptyWorkflow from '../components/EmptyWorkflow.jsx';
 import AnalysisResults from '../components/AnalysisResults.jsx';
 import CommandPalette from '../components/CommandPalette.jsx';
+import Chat from '../components/Chat.jsx';
+import ContextMenu from '../components/ContextMenu.jsx';
+import NodeProperties from '../components/NodeProperties.jsx';
 
 const nodeTypes = {
   custom: CustomNode,
@@ -41,7 +55,7 @@ const createMockWorkflow = (query) => {
         label: 'Start Workflow',
         description: `Query: ${query}`,
         status: 'completed',
-        icon: '🚀'
+        icon: '▶'
       },
       style: {
         background: '#10b981',
@@ -63,7 +77,7 @@ const createMockWorkflow = (query) => {
         label: 'Create Users',
         description: 'Create 5 new users with specified roles',
         status: 'pending',
-        icon: '👥',
+        icon: '⚡',
         operation_id: 'create_users'
       },
       style: {
@@ -85,7 +99,7 @@ const createMockWorkflow = (query) => {
         label: 'Create Requesters',
         description: 'Create 3 requesters with appropriate permissions',
         status: 'pending',
-        icon: '📋',
+        icon: '⚡',
         operation_id: 'create_requesters'
       },
       style: {
@@ -107,7 +121,7 @@ const createMockWorkflow = (query) => {
         label: 'Authenticate Users',
         description: 'Authenticate each user and verify access',
         status: 'pending',
-        icon: '🔐',
+        icon: '⚡',
         operation_id: 'authenticate_users'
       },
       style: {
@@ -129,7 +143,7 @@ const createMockWorkflow = (query) => {
         label: 'Get Active Count',
         description: 'Retrieve and display active user count',
         status: 'pending',
-        icon: '📊',
+        icon: '⟳',
         operation_id: 'get_active_count'
       },
       style: {
@@ -151,7 +165,7 @@ const createMockWorkflow = (query) => {
       label: 'Complete',
       description: 'Workflow completed successfully',
       status: 'idle',
-      icon: '✅'
+              icon: '■'
     },
     style: {
       background: '#ef4444',
@@ -197,6 +211,16 @@ const WorkflowContent = () => {
   const location = useLocation();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    nodeId: null,
+    nodeType: null,
+    isCanvas: false
+  });
   const [selectedNode, setSelectedNode] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -208,6 +232,8 @@ const WorkflowContent = () => {
   const [showResults, setShowResults] = useState(false);
   const [query, setQuery] = useState('');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
   
   const reactFlowWrapper = useRef(null);
   const { project } = useReactFlow();
@@ -256,6 +282,8 @@ const WorkflowContent = () => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [query]);
+
+
 
   const generateWorkflow = async (customQuery = null) => {
     const queryToUse = String(customQuery || query || '');
@@ -633,6 +661,395 @@ const WorkflowContent = () => {
     }
   }, [setNodes, setEdges, selectedNode]);
 
+  // Context menu handlers
+  const onNodeContextMenu = useCallback((event, node) => {
+    event.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      nodeId: node.id,
+      nodeType: node.type,
+      isCanvas: false
+    });
+  }, []);
+
+  const onPaneContextMenu = useCallback((event) => {
+    event.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      nodeId: null,
+      nodeType: null,
+      isCanvas: true
+    });
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(prev => ({ ...prev, visible: false }));
+  }, []);
+
+  // Handle click outside to close context menu
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (contextMenu.visible) {
+        closeContextMenu();
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [contextMenu.visible, closeContextMenu]);
+
+  const handleContextMenuAction = useCallback((action, nodeId) => {
+    switch (action) {
+      case 'add-start':
+        addNode('start', contextMenu.x, contextMenu.y);
+        break;
+      case 'add-execute':
+        addNode('execute', contextMenu.x, contextMenu.y);
+        break;
+      case 'add-process':
+        addNode('process', contextMenu.x, contextMenu.y);
+        break;
+      case 'add-decision':
+        addNode('decision', contextMenu.x, contextMenu.y);
+        break;
+      case 'add-end':
+        addNode('end', contextMenu.x, contextMenu.y);
+        break;
+      case 'add-custom':
+        addNode('custom', contextMenu.x, contextMenu.y);
+        break;
+      case 'edit':
+        if (nodeId) {
+          setSelectedNode(nodes.find(n => n.id === nodeId));
+        }
+        break;
+      case 'duplicate':
+        if (nodeId) {
+          duplicateNode(nodeId);
+        }
+        break;
+      case 'delete':
+        if (nodeId) {
+          deleteNode(nodeId);
+        }
+        break;
+      case 'copy':
+        if (nodeId) {
+          copyNode(nodeId);
+        }
+        break;
+      case 'parameters':
+        if (nodeId) {
+          setSelectedNode(nodes.find(n => n.id === nodeId));
+        }
+        break;
+      case 'status':
+        if (nodeId) {
+          changeNodeStatus(nodeId);
+        }
+        break;
+      case 'connect':
+        if (nodeId) {
+          startConnection(nodeId);
+        }
+        break;
+      case 'details':
+        if (nodeId) {
+          setSelectedNode(nodes.find(n => n.id === nodeId));
+        }
+        break;
+      case 'clear':
+        clearWorkflow();
+        break;
+      case 'arrange':
+        autoArrangeNodes();
+        break;
+      case 'export':
+        exportWorkflow();
+        break;
+      case 'import':
+        importWorkflow();
+        break;
+      default:
+        console.log('Unknown action:', action);
+    }
+  }, [contextMenu, nodes]);
+
+  // Node manipulation functions
+  const addNode = (type, x, y) => {
+    const newNode = {
+      id: `${type}-${Date.now()}`,
+      type: type,
+      position: { x: x - 100, y: y - 50 },
+      data: {
+        label: `${type.charAt(0).toUpperCase() + type.slice(1)} Node`,
+        description: `A ${type} node`,
+        status: 'idle',
+        icon: getNodeIcon(type),
+        parameters: {}
+      },
+      style: getNodeStyle(type)
+    };
+    setNodes(prev => [...prev, newNode]);
+  };
+
+  const duplicateNode = (nodeId) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (node) {
+      const newNode = {
+        ...node,
+        id: `${node.type}-${Date.now()}`,
+        position: {
+          x: node.position.x + 50,
+          y: node.position.y + 50
+        }
+      };
+      setNodes(prev => [...prev, newNode]);
+    }
+  };
+
+  const deleteNode = (nodeId) => {
+    setNodes(prev => prev.filter(n => n.id !== nodeId));
+    setEdges(prev => prev.filter(e => e.source !== nodeId && e.target !== nodeId));
+    if (selectedNode?.id === nodeId) {
+      setSelectedNode(null);
+    }
+  };
+
+  const copyNode = (nodeId) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (node) {
+      navigator.clipboard.writeText(JSON.stringify(node));
+    }
+  };
+
+  const changeNodeStatus = (nodeId) => {
+    const statuses = ['idle', 'pending', 'running', 'completed', 'failed'];
+    const node = nodes.find(n => n.id === nodeId);
+    if (node) {
+      const currentIndex = statuses.indexOf(node.data.status);
+      const nextStatus = statuses[(currentIndex + 1) % statuses.length];
+      setNodes(prev => prev.map(n => 
+        n.id === nodeId 
+          ? { ...n, data: { ...n.data, status: nextStatus } }
+          : n
+      ));
+    }
+  };
+
+  const startConnection = (nodeId) => {
+    // This would typically start a connection mode
+    console.log('Starting connection from node:', nodeId);
+  };
+
+  const autoArrangeNodes = () => {
+    // Simple auto-arrange logic
+    const arrangedNodes = nodes.map((node, index) => ({
+      ...node,
+      position: {
+        x: 100 + (index * 200),
+        y: 100 + (Math.floor(index / 3) * 150)
+      }
+    }));
+    setNodes(arrangedNodes);
+  };
+
+  const exportWorkflow = () => {
+    const workflowData = { nodes, edges };
+    const blob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'workflow.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importWorkflow = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const workflowData = JSON.parse(e.target.result);
+            setNodes(workflowData.nodes || []);
+            setEdges(workflowData.edges || []);
+          } catch (error) {
+            console.error('Error importing workflow:', error);
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  };
+
+  const getNodeIcon = (type) => {
+    const icons = {
+      start: '▶',
+      execute: '⚡',
+      process: '⟳',
+      decision: '?',
+      end: '■',
+      custom: '⚙'
+    };
+    return icons[type] || '⚙';
+  };
+
+  const getNodeStyle = (type) => {
+    const styles = {
+      start: {
+        background: '#10b981',
+        color: 'white',
+        border: '2px solid #059669',
+        borderRadius: '8px',
+        padding: '10px',
+        fontWeight: 'bold'
+      },
+      execute: {
+        background: '#3b82f6',
+        color: 'white',
+        border: '2px solid #2563eb',
+        borderRadius: '8px',
+        padding: '10px',
+        fontWeight: 'bold'
+      },
+      process: {
+        background: '#8b5cf6',
+        color: 'white',
+        border: '2px solid #7c3aed',
+        borderRadius: '8px',
+        padding: '10px',
+        fontWeight: 'bold'
+      },
+      decision: {
+        background: '#f59e0b',
+        color: 'white',
+        border: '2px solid #d97706',
+        borderRadius: '8px',
+        padding: '10px',
+        fontWeight: 'bold'
+      },
+      end: {
+        background: '#ef4444',
+        color: 'white',
+        border: '2px solid #dc2626',
+        borderRadius: '8px',
+        padding: '10px',
+        fontWeight: 'bold'
+      },
+      custom: {
+        background: '#6b7280',
+        color: 'white',
+        border: '2px solid #4b5563',
+        borderRadius: '8px',
+        padding: '10px',
+        fontWeight: 'bold'
+      }
+    };
+    return styles[type] || styles.custom;
+  };
+
+  const handleNodeClick = useCallback((event, node) => {
+    setSelectedNode(node);
+  }, []);
+
+  const handleChatMessage = async (message) => {
+    setIsChatLoading(true);
+    
+    // Add user message to chat
+    const userMessage = {
+      id: Date.now(),
+      type: 'user',
+      content: message,
+      timestamp: new Date().toISOString()
+    };
+    
+    setChatMessages(prev => [...prev, userMessage]);
+    
+    try {
+      // Check if this is a workflow-related query
+      const workflowKeywords = ['create', 'generate', 'workflow', 'process', 'execute', 'automate', 'user', 'ticket', 'asset', 'event'];
+      const isWorkflowQuery = workflowKeywords.some(keyword => message.toLowerCase().includes(keyword));
+      
+      if (isWorkflowQuery) {
+        // Generate workflow from chat message
+        await generateWorkflow(message);
+        
+        const botMessage = {
+          id: Date.now() + 1,
+          type: 'bot',
+          content: `I've generated a workflow for: "${message}". You can see it in the canvas and execute it when ready.`,
+          timestamp: new Date().toISOString()
+        };
+        
+        setChatMessages(prev => [...prev, botMessage]);
+      } else {
+        // Regular chat response
+        const response = await fetch('http://localhost:8000/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: message,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          const botMessage = {
+            id: Date.now() + 1,
+            type: 'bot',
+            content: data.response || 'I processed your request successfully.',
+            timestamp: new Date().toISOString(),
+            nodes: data.nodes,
+            edges: data.edges
+          };
+          
+          setChatMessages(prev => [...prev, botMessage]);
+          
+          // If the response includes workflow data, update the canvas
+          if (data.nodes && data.edges) {
+            setNodes(data.nodes);
+            setEdges(data.edges);
+          }
+        } else {
+          const botMessage = {
+            id: Date.now() + 1,
+            type: 'bot',
+            content: 'I encountered an error processing your request. Please try again.',
+            timestamp: new Date().toISOString()
+          };
+          
+          setChatMessages(prev => [...prev, botMessage]);
+        }
+      }
+    } catch (error) {
+      console.error('Error processing chat message:', error);
+      
+      const botMessage = {
+        id: Date.now() + 1,
+        type: 'bot',
+        content: 'I encountered an error. Please try again.',
+        timestamp: new Date().toISOString()
+      };
+      
+      setChatMessages(prev => [...prev, botMessage]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
   const clearWorkflow = () => {
     setNodes([]);
     setEdges([]);
@@ -644,6 +1061,7 @@ const WorkflowContent = () => {
     setShowResults(false);
     setExecutionStatus(null);
     setQuery('');
+    setChatMessages([]);
   };
 
   const getEdgePath = (sourceX, sourceY, targetX, targetY) => {
@@ -676,113 +1094,189 @@ const WorkflowContent = () => {
   };
 
   return (
-    <div className="workflow-container">
-      <div className="workflow-header">
-        <div className="workflow-title">
-          <h1>Workflow Builder</h1>
-          <p>Create and execute automated workflows with AI-powered generation</p>
-        </div>
-        
-        <div className="workflow-controls">
-          <div className="query-input-container">
-            <input
-              type="text"
-              placeholder="Describe your workflow (e.g., 'Create 5 users and 3 tickets')"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="query-input"
-              disabled={isGenerating || isExecuting}
-            />
-            <button
-              onClick={generateWorkflow}
-              disabled={!query.trim() || isGenerating || isExecuting}
-              className="generate-btn"
-            >
-              {isGenerating ? 'Generating...' : 'Generate Workflow'}
+    <div className="wf-container">
+      {/* LEFT PANEL - CHAT */}
+      <div className="wf-left-panel">
+        <div className="wf-panel-header">
+          <h3>AI Agent Chat</h3>
+          <div className="wf-panel-actions">
+            <button onClick={clearWorkflow} className="wf-panel-close">
+              Clear All
             </button>
           </div>
-          
-          {nodes.length > 0 && (
-            <div className="execution-controls">
-              <button
-                onClick={executeWorkflow}
-                disabled={isExecuting}
-                className="execute-btn"
-              >
-                {isExecuting ? 'Executing...' : 'Execute Workflow'}
-              </button>
-              <button onClick={clearWorkflow} className="clear-btn">
-                Clear
-              </button>
-            </div>
-          )}
         </div>
+        
+        <div className="wf-panel-content">
+          <Chat 
+            messages={chatMessages.map(msg => ({
+              sender: msg.type === 'user' ? 'user' : 'agent',
+              text: msg.content,
+              timestamp: msg.timestamp,
+              isError: msg.type === 'error'
+            }))}
+            onMessagesChange={(newMessages) => {
+              setChatMessages(newMessages.map(msg => ({
+                id: Date.now() + Math.random(),
+                type: msg.sender === 'user' ? 'user' : 'bot',
+                content: msg.text,
+                timestamp: msg.timestamp
+              })));
+            }}
+            onSendMessage={async (payload) => {
+              try {
+                const response = await fetch('http://localhost:8000/chat', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    query: payload.query,
+                  }),
+                });
 
-        {executionStatus && (
-          <div className={`execution-status ${executionStatus}`}>
-            <div className="status-info">
-              <span className="status-text">
-                {executionStatus === 'running' ? 'Executing...' : 
-                 executionStatus === 'completed' ? 'Completed!' : 
-                 executionStatus === 'failed' ? 'Failed!' : 'Unknown'}
-              </span>
-              {executionStatus === 'running' && (
-                <span className="step-info">
-                  Step {currentStep + 1} of {totalSteps}
+                if (response.ok) {
+                  const data = await response.json();
+                  
+                  // If the response includes workflow data, update the canvas
+                  if (data.nodes && data.edges) {
+                    setNodes(data.nodes);
+                    setEdges(data.edges);
+                  }
+                  
+                  return { response: data.response || 'I processed your request successfully.' };
+                } else {
+                  return { response: 'I encountered an error processing your request. Please try again.' };
+                }
+              } catch (error) {
+                console.error('Error processing chat message:', error);
+                return { response: 'I encountered an error. Please try again.' };
+              }
+            }}
+            placeholder="Ask me to create workflows, modify nodes, or help with anything..."
+          />
+          
+          {executionStatus && (
+            <div className={`execution-status ${executionStatus}`}>
+              <div className="status-info">
+                <span className="status-text">
+                  {executionStatus === 'running' ? 'Executing...' : 
+                   executionStatus === 'completed' ? 'Completed!' : 
+                   executionStatus === 'failed' ? 'Failed!' : 'Unknown'}
                 </span>
+                {executionStatus === 'running' && (
+                  <span className="step-info">
+                    Step {currentStep + 1} of {totalSteps}
+                  </span>
+                )}
+              </div>
+              {executionStatus === 'running' && (
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill"
+                    style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
+                  />
+                </div>
               )}
             </div>
-            {executionStatus === 'running' && (
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill"
-                  style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
-                />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="workflow-content">
-        <Sidebar
-          selectedNode={selectedNode}
-          onNodeUpdate={handleNodeUpdate}
-          onNodeDelete={handleNodeDelete}
-        />
-        
-        <div className="workflow-canvas-container" ref={reactFlowWrapper}>
-          {nodes.length === 0 ? (
-            <EmptyWorkflow onGenerate={generateWorkflow} />
-          ) : (
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onNodeClick={onNodeClick}
-              onNodeDragStop={onNodeDragStop}
-              onDragOver={onDragOver}
-              onDrop={onDrop}
-              nodeTypes={nodeTypes}
-              edgeTypes={edgeTypes}
-              fitView
-              attributionPosition="bottom-left"
-            >
-              <Controls />
-              <Background />
-              <MiniMap />
-            </ReactFlow>
           )}
         </div>
+      </div>
 
-        {showResults && (
-          <AnalysisResults
-            results={executionResults}
-            onClose={() => setShowResults(false)}
-          />
-        )}
+      {/* CENTER PANEL - GRAPH CANVAS */}
+      <div className="wf-main-area">
+        <div className="wf-graph-container">
+                      <div className="wf-graph-toolbar">
+              <div className="wf-graph-info">
+                <FiSettings className="toolbar-icon" />
+                Workflow Canvas
+                {nodes.length > 0 && (
+                  <span className="node-count">
+                    {nodes.length} node{nodes.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+              <div className="wf-graph-actions">
+                {nodes.length > 0 && (
+                  <>
+                    <button
+                      onClick={executeWorkflow}
+                      disabled={isExecuting}
+                      title="Execute Workflow"
+                      className="action-btn execute-btn"
+                    >
+                      {isExecuting ? <FiRefreshCw /> : <FiPlay />}
+                    </button>
+                    <button 
+                      onClick={autoArrangeNodes} 
+                      title="Auto Arrange Nodes"
+                      className="action-btn arrange-btn"
+                    >
+                      <FiGrid />
+                    </button>
+                    <button 
+                      onClick={exportWorkflow} 
+                      title="Export Workflow"
+                      className="action-btn export-btn"
+                    >
+                      <FiDownload />
+                    </button>
+                    <button 
+                      onClick={clearWorkflow} 
+                      title="Clear Workflow"
+                      className="action-btn clear-btn"
+                    >
+                      <FiX />
+                    </button>
+                  </>
+                )}
+                {nodes.length === 0 && (
+                  <button 
+                    onClick={() => generateWorkflow('Create a simple workflow')} 
+                    title="Generate Sample Workflow"
+                    className="action-btn sample-btn"
+                  >
+                    <FiPlus />
+                  </button>
+                )}
+              </div>
+            </div>
+          
+          <div className="wf-react-flow" ref={reactFlowWrapper}>
+            {nodes.length === 0 ? (
+              <EmptyWorkflow onGenerate={generateWorkflow} />
+            ) : (
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onNodeClick={handleNodeClick}
+                onNodeContextMenu={onNodeContextMenu}
+                onPaneContextMenu={onPaneContextMenu}
+                onNodeDragStop={onNodeDragStop}
+                onDragOver={onDragOver}
+                onDrop={onDrop}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                fitView
+                attributionPosition="bottom-left"
+              >
+                <Controls className="wf-controls" />
+                <Background />
+                <MiniMap className="wf-minimap" />
+              </ReactFlow>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* RIGHT PANEL - NODE DETAILS */}
+      <div className="wf-right-panel">
+        <NodeProperties 
+          selectedNode={selectedNode} 
+          onNodeUpdate={handleNodeUpdate}
+        />
       </div>
 
       <CommandPalette
@@ -793,13 +1287,18 @@ const WorkflowContent = () => {
         setQuery={setQuery}
       />
 
-      <style jsx>{`
-        @keyframes dash {
-          to {
-            stroke-dashoffset: -10;
-          }
-        }
-      `}</style>
+      {/* Context Menu */}
+      {contextMenu.visible && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={closeContextMenu}
+          onAction={handleContextMenuAction}
+          nodeId={contextMenu.nodeId}
+          nodeType={contextMenu.nodeType}
+          isCanvas={contextMenu.isCanvas}
+        />
+      )}
     </div>
   );
 };

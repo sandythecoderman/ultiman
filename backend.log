@@ -1,0 +1,85 @@
+nohup: ignoring input
+INFO:     Will watch for changes in these directories: ['/home/sandy/ultiman']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [100983] using StatReload
+INFO:     Started server process [100987]
+INFO:     Waiting for application startup.
+Unable to retrieve routing information
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'services/agent-service/app/legacy_agent/__init__.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [100987]
+INFO:     Started server process [105080]
+INFO:     Waiting for application startup.
+Unable to retrieve routing information
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'services/agent-service/app/workflow_engine.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [105080]
+INFO:     Started server process [105164]
+INFO:     Waiting for application startup.
+Unable to retrieve routing information
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'services/agent-service/app/main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [105164]
+INFO:     Started server process [105224]
+INFO:     Waiting for application startup.
+Unable to retrieve routing information
+INFO:     Application startup complete.
+Starting up and initializing RAG Engine...
+Initializing RAG Engine...
+Warning: Neo4j not available: Unable to retrieve routing information
+Running in mock mode - some features may be limited.
+Loading embedding model: all-MiniLM-L6-v2...
+Embedding model loaded.
+Loading vector database from /home/sandy/ultiman/services/data-pipeline/faiss_index.bin...
+Vector DB loaded: 1324 vectors.
+Caching all named entities from the knowledge graph...
+No Neo4j connection - using empty entity cache
+Generative AI model initialized successfully using service account.
+RAG Engine Initialized Successfully.
+Application startup complete.
+INFO:     127.0.0.1:59366 - "OPTIONS /workflow/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59368 - "POST /workflow/generate HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:43488 - "POST /workflow/generate HTTP/1.1" 422 Unprocessable Entity
+WARNING:  StatReload detected changes in 'services/agent-service/app/main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [105224]
+INFO:     Started server process [106187]
+INFO:     Waiting for application startup.
+Unable to retrieve routing information
+WARNING:  StatReload detected changes in 'services/agent-service/app/main.py'. Reloading...
+INFO:     Application startup complete.
+INFO:     Started server process [106226]
+INFO:     Waiting for application startup.
+Unable to retrieve routing information
+INFO:     Application startup complete.
+Starting up and initializing RAG Engine...
+Initializing RAG Engine...
+Warning: Neo4j not available: Unable to retrieve routing information
+Running in mock mode - some features may be limited.
+Loading embedding model: all-MiniLM-L6-v2...
+Embedding model loaded.
+Loading vector database from /home/sandy/ultiman/services/data-pipeline/faiss_index.bin...
+Vector DB loaded: 1324 vectors.
+Caching all named entities from the knowledge graph...
+No Neo4j connection - using empty entity cache
+Generative AI model initialized successfully using service account.
+RAG Engine Initialized Successfully.
+Application startup complete.
+INFO:     127.0.0.1:60838 - "POST /workflow/generate HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:36166 - "POST /workflow/generate HTTP/1.1" 422 Unprocessable Entity
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [106226]
+INFO:     Stopping reloader process [100983]

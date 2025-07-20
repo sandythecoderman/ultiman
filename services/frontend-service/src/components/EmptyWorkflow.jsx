@@ -1,8 +1,8 @@
 import React from 'react';
-import { FiShare2 } from 'react-icons/fi';
+import { FiShare2, FiPlay } from 'react-icons/fi';
 import './EmptyWorkflow.css';
 
-const EmptyWorkflow = () => {
+const EmptyWorkflow = ({ onGenerate }) => {
   return (
     <div className="empty-workflow-container">
       <div className="empty-icon">
@@ -17,6 +17,16 @@ const EmptyWorkflow = () => {
           <li>"Summarize the content of a website."</li>
         </ul>
       </div>
+      {onGenerate && (
+        <div className="quick-actions">
+          <button 
+            onClick={() => onGenerate("Create a simple data processing workflow")}
+            className="quick-action-btn"
+          >
+            <FiPlay /> Quick Start
+          </button>
+        </div>
+      )}
     </div>
   );
 };

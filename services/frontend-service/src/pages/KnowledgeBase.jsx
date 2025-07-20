@@ -25,7 +25,8 @@ import {
   FiDatabase,
   FiCheck,
   FiMove,
-  FiMoreHorizontal
+  FiMoreHorizontal,
+  FiTarget
 } from 'react-icons/fi';
 import './KnowledgeBase.css';
 import mockGraphData from '../data/mockGraphData';
@@ -346,8 +347,9 @@ const KnowledgeBase = () => {
   };
 
   const fitToScreen = () => {
-    // This would be handled by the Neo4jGraph component
-    showNotification('Fitted to screen');
+    // Dispatch custom event to trigger fit to screen in Neo4jGraph
+    window.dispatchEvent(new CustomEvent('fitToScreen'));
+    showNotification('Fitted graph to screen');
   };
 
   const copyNodeId = () => {
@@ -438,7 +440,7 @@ const KnowledgeBase = () => {
           </div>
           <div className="kb-fullscreen-actions">
             <button onClick={fitToScreen} title="Fit to Screen">
-              <FiMaximize2 />
+              <FiTarget />
             </button>
             <button onClick={exportGraphData} title="Export">
               <FiDownload />
@@ -609,7 +611,7 @@ const KnowledgeBase = () => {
                 onClick={fitToScreen}
                 title="Fit to screen"
               >
-                <FiMaximize2 />
+                <FiTarget />
               </button>
               <button
                 className="kb-toolbar-btn"

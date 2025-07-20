@@ -549,23 +549,28 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.18);
 }
 
-/* Relationship buttons - light grey when unchecked */
+/* Relationship buttons - app theme colors */
 .kb-segment.relationship {
-  background: #444444 !important;
-  border-color: #666666 !important;
-  color: #cccccc !important;
+  background: var(--bg-color, #1a1a1a) !important;
+  border-color: var(--border-color, #333) !important;
+  color: var(--text-color, #ffffff) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
 
 .kb-segment.relationship:hover {
-  background: #555555 !important;
-  border-color: #777777 !important;
-  color: #dddddd !important;
+  background: var(--hover-bg, #2a2a2a) !important;
+  border-color: var(--accent-color, #007acc) !important;
+  color: var(--text-color, #ffffff) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+  transform: translateY(-1px) !important;
 }
 
 .kb-segment.relationship.selected {
-  background: #22c55e !important;
-  border-color: #22c55e !important;
+  background: #374151 !important;
+  border-color: #374151 !important;
   color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(55, 65, 81, 0.3) !important;
+  transform: translateY(-1px) !important;
 }
 
 .kb-segment.selected::before {
@@ -605,6 +610,28 @@
   transform: scale(1.1);
 }
 
+/* Enhanced relationship button label styling */
+.kb-segment.relationship .kb-segment-label {
+  font-weight: 600 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+.kb-segment.relationship .kb-segment-label::before {
+  background: var(--text-color, #ffffff) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+}
+
+.kb-segment.relationship:hover .kb-segment-label::before {
+  background: var(--accent-color, #007acc) !important;
+  transform: scale(1.2) !important;
+}
+
+.kb-segment.relationship.selected .kb-segment-label::before {
+  background: #ffffff !important;
+  transform: scale(1.1) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
 .kb-segment-count {
   background: rgba(255, 255, 255, 0.1);
   color: inherit;
@@ -621,6 +648,26 @@
   background: rgba(255, 255, 255, 0.3);
   color: white;
   border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Enhanced relationship button count styling */
+.kb-segment.relationship .kb-segment-count {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: var(--text-color, #ffffff) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  font-weight: 600 !important;
+}
+
+.kb-segment.relationship:hover .kb-segment-count {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.kb-segment.relationship.selected .kb-segment-count {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  font-weight: 700 !important;
 }
 
 /* Loading and Error States */
@@ -1004,9 +1051,9 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem;
-  background: #111;
+  background: var(--secondary-bg);
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-color);
 }
 
 .kb-link-type-name {
@@ -1031,13 +1078,13 @@
 }
 
 .kb-no-links {
-  color: #888;
+  color: var(--text-color-light);
   font-style: italic;
   padding: 0.5rem;
   text-align: center;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--secondary-bg);
   border-radius: 6px;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border: 1px dashed var(--border-color);
 } 
 
 /* Node Details Properties Table */
@@ -1050,7 +1097,7 @@
 }
 .kb-properties-table td {
   padding: 2px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid var(--border-color);
   color: var(--text-color);
 }
 .kb-properties-table tr:last-child td {
@@ -1067,7 +1114,7 @@
 .kb-connected-node {
   display: flex;
   align-items: center;
-  background: rgba(255,255,255,0.04);
+  background: var(--secondary-bg);
   border-radius: 4px;
   padding: 2px 8px;
   font-size: 0.95em;
@@ -1095,17 +1142,17 @@
   display: flex;
   align-items: center;
   gap: 0.25em;
-  background: var(--panel-bg, #222);
-  color: var(--text-color, #fff);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--secondary-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 0.4em 0.9em;
   font-size: 0.98em;
   cursor: pointer;
-  transition: background 0.15s, border 0.15s;
+  transition: all 0.2s ease;
 }
 .kb-node-actions .kb-action-btn:hover {
-  background: var(--accent-color, #444);
-  border-color: var(--accent-color, #444);
-  color: #fff;
+  background: var(--hover-bg);
+  border-color: var(--accent-color);
+  color: var(--text-color);
 } 

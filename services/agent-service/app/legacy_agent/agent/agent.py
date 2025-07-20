@@ -5,13 +5,13 @@ import json
 # Add the parent directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from legacy.llm_client import LLMClient
-from legacy.aag.aag_pipeline import AAGPipeline
-from legacy.agent.task_decomposer import TaskDecomposer
-from legacy.agent.planner import Planner, RAGPipeline # Using the placeholder RAG for now
-from legacy.agent.executor import Executor
-from legacy.agent.response_generator import ResponseGenerator
-from legacy.agent.data_models import FinalOutput
+from ..llm_client import LLMClient
+from ..aag.aag_pipeline import AAGPipeline
+from .task_decomposer import TaskDecomposer
+from .planner import Planner, RAGPipeline # Using the placeholder RAG for now
+from .executor import Executor
+from .response_generator import ResponseGenerator
+from .data_models import FinalOutput
 
 class UnifiedOrchestratorAgent:
     """

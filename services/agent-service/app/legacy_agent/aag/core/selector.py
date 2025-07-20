@@ -5,7 +5,7 @@ import os
 # Add the root project directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from legacy.llm_client import LLMClient
+from ...llm_client import LLMClient
 
 class Selector:
     """

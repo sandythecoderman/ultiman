@@ -54,4 +54,36 @@
 
 .example-prompts li {
   margin-bottom: 0.5rem;
+}
+
+.quick-actions {
+  margin-top: 2rem;
+}
+
+.quick-action-btn {
+  padding: 0.75rem 1.5rem;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-sans);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.quick-action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.quick-action-btn:hover {
+  background: color-mix(in srgb, var(--accent-color) 80%, black);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 } 

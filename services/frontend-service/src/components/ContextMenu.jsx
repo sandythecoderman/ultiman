@@ -1,189 +1,101 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { 
-  FiPlus, 
+  FiEdit3, 
   FiCopy, 
   FiTrash2, 
-  FiEdit3, 
-  FiLink, 
+  FiClipboard, 
   FiSettings, 
-  FiPlay,
-  FiDownload,
-  FiZap,
-  FiCode,
-  FiLayers
+  FiRefreshCw, 
+  FiLink, 
+  FiInfo, 
+  FiPlay, 
+  FiZap, 
+  FiHelpCircle, 
+  FiCheck, 
+  FiTarget, 
+  FiPackage, 
+  FiX, 
+  FiGrid, 
+  FiDownload, 
+  FiUpload, 
+  FiMove
 } from 'react-icons/fi';
 import './ContextMenu.css';
 
 const ContextMenu = ({ 
   x, 
   y, 
-  visible, 
   onClose, 
-  type = 'canvas', // 'canvas', 'node', 'edge'
-  nodeData = null,
-  onAction 
+  onAction, 
+  nodeId = null, 
+  nodeType = null,
+  isCanvas = false 
 }) => {
-  const menuRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        onClose();
-      }
-    };
-
-    const handleEscape = (event) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    if (visible) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleEscape);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [visible, onClose]);
-
-  if (!visible) return null;
-
-  const handleAction = (action, data = {}) => {
-    onAction(action, { ...data, nodeData });
+  const handleAction = (action) => {
+    onAction(action, nodeId);
     onClose();
   };
 
-  const canvasMenuItems = [
-    {
-      id: 'create-start',
-      label: 'Add Start Node',
-      icon: <FiPlay />,
-      action: () => handleAction('create-node', { type: 'start' }),
-      shortcut: '1'
-    },
-    {
-      id: 'create-execute',
-      label: 'Add AI Execute Node',
-      icon: <FiZap />,
-      action: () => handleAction('create-node', { type: 'execute' }),
-      shortcut: '2'
-    },
-    {
-      id: 'create-process',
-      label: 'Add Process Node',
-      icon: <FiCode />,
-      action: () => handleAction('create-node', { type: 'process' }),
-      shortcut: '3'
-    },
-    {
-      id: 'create-end',
-      label: 'Add End Node',
-      icon: <FiLayers />,
-      action: () => handleAction('create-node', { type: 'end' }),
-      shortcut: '4'
-    },
-    { type: 'divider' },
-    {
-      id: 'auto-layout',
-      label: 'Auto Layout',
-      icon: <FiSettings />,
-      action: () => handleAction('auto-layout'),
-      shortcut: 'Shift+L'
-    },
-    {
-      id: 'export-image',
-      label: 'Export as Image',
-      icon: <FiDownload />,
-      action: () => handleAction('export-image'),
-      shortcut: 'Ctrl+E'
-    }
+  const nodeActions = [
+    { id: 'edit', label: 'Edit Node', icon: <FiEdit3 /> },
+    { id: 'duplicate', label: 'Duplicate', icon: <FiCopy /> },
+    { id: 'delete', label: 'Delete', icon: <FiTrash2 />, danger: true },
+    { id: 'copy', label: 'Copy', icon: <FiClipboard /> },
+    { id: 'parameters', label: 'Parameters', icon: <FiSettings /> },
+    { id: 'status', label: 'Change Status', icon: <FiRefreshCw /> },
+    { id: 'connect', label: 'Connect To...', icon: <FiLink /> },
+    { id: 'details', label: 'View Details', icon: <FiInfo /> }
   ];
 
-  const nodeMenuItems = [
-    {
-      id: 'edit',
-      label: 'Edit Node',
-      icon: <FiEdit3 />,
-      action: () => handleAction('edit-node'),
-      shortcut: 'Enter'
-    },
-    {
-      id: 'duplicate',
-      label: 'Duplicate',
-      icon: <FiCopy />,
-      action: () => handleAction('duplicate-node'),
-      shortcut: 'Ctrl+D'
-    },
-    {
-      id: 'connect',
-      label: 'Quick Connect',
-      icon: <FiLink />,
-      action: () => handleAction('quick-connect'),
-      shortcut: 'C'
-    },
-    { type: 'divider' },
-    {
-      id: 'test',
-      label: 'Test Node',
-      icon: <FiPlay />,
-      action: () => handleAction('test-node'),
-      shortcut: 'T'
-    },
-    {
-      id: 'export-config',
-      label: 'Export Config',
-      icon: <FiDownload />,
-      action: () => handleAction('export-config'),
-      shortcut: 'Ctrl+S'
-    },
-    { type: 'divider' },
-    {
-      id: 'delete',
-      label: 'Delete',
-      icon: <FiTrash2 />,
-      action: () => handleAction('delete-node'),
-      shortcut: 'Del',
-      danger: true
-    }
+  const canvasActions = [
+    { id: 'add-start', label: 'Add Start Node', icon: <FiPlay /> },
+    { id: 'add-execute', label: 'Add Execute Node', icon: <FiZap /> },
+    { id: 'add-process', label: 'Add Process Node', icon: <FiRefreshCw /> },
+    { id: 'add-decision', label: 'Add Decision Node', icon: <FiHelpCircle /> },
+    { id: 'add-end', label: 'Add End Node', icon: <FiCheck /> },
+    { id: 'add-custom', label: 'Add Custom Node', icon: <FiTarget /> },
+    { id: 'paste', label: 'Paste', icon: <FiClipboard /> },
+    { id: 'select-all', label: 'Select All', icon: <FiPackage /> },
+    { id: 'clear', label: 'Clear Canvas', icon: <FiTrash2 />, danger: true },
+    { id: 'arrange', label: 'Auto Arrange', icon: <FiGrid /> },
+    { id: 'export', label: 'Export Workflow', icon: <FiDownload /> },
+    { id: 'import', label: 'Import Workflow', icon: <FiUpload /> }
   ];
 
-  const menuItems = type === 'node' ? nodeMenuItems : canvasMenuItems;
-
-  // Adjust position to keep menu in viewport
-  const adjustedPosition = {
-    left: Math.min(x, window.innerWidth - 200),
-    top: Math.min(y, window.innerHeight - (menuItems.length * 40))
-  };
+  const actions = isCanvas ? canvasActions : nodeActions;
 
   return (
     <div 
-      ref={menuRef}
-      className="wf-context-menu"
-      style={adjustedPosition}
-      onClick={(e) => e.stopPropagation()}
+      className="context-menu"
+      style={{ 
+        position: 'fixed', 
+        left: x, 
+        top: y,
+        zIndex: 1000
+      }}
     >
-      {menuItems.map((item, index) => {
-        if (item.type === 'divider') {
-          return <div key={index} className="wf-context-divider" />;
-        }
-
-        return (
+      <div className="context-menu-header">
+        <span className="context-menu-title">
+          {isCanvas ? 'Canvas Actions' : `${nodeType || 'Node'} Actions`}
+        </span>
+        <button className="context-menu-close" onClick={onClose}>
+          <FiX />
+        </button>
+      </div>
+      
+      <div className="context-menu-content">
+        {actions.map((action) => (
           <button
-            key={item.id}
-            className={`wf-context-item ${item.danger ? 'danger' : ''}`}
-            onClick={item.action}
+            key={action.id}
+            className="context-menu-item"
+            data-danger={action.danger || false}
+            onClick={() => handleAction(action.id)}
           >
-            <span className="wf-context-icon">{item.icon}</span>
-            <span className="wf-context-label">{item.label}</span>
-            {item.shortcut && (
-              <span className="wf-context-shortcut">{item.shortcut}</span>
-            )}
+            <span className="context-menu-icon">{action.icon}</span>
+            <span className="context-menu-label">{action.label}</span>
           </button>
-        );
-      })}
+        ))}
+      </div>
     </div>
   );
 };

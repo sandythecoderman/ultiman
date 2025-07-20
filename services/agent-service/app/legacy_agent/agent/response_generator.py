@@ -5,7 +5,7 @@ from typing import List
 # Add the parent directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from legacy.agent.data_models import ExecutionPlan, FinalOutput, JSONOutputNode
+from .data_models import ExecutionPlan, FinalOutput, JSONOutputNode
 
 class ResponseGenerator:
     """

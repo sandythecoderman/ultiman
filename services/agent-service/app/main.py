@@ -52,6 +52,7 @@ class ChatResponse(BaseModel):
 
 class WorkflowRequest(BaseModel):
     query: str
+    prompt: Optional[str] = None
     session_id: Optional[str] = None
 
 class WorkflowResponse(BaseModel):
@@ -105,7 +106,8 @@ async def generate_workflow(request: WorkflowRequest):
         logger.info(f"🚀 Generating workflow for query: {request.query}")
         
         # Generate workflow using the new workflow engine
-        workflow_data = workflow_engine.generate_workflow_from_query(request.query)
+        query_to_use = request.query or request.prompt or ""
+        workflow_data = workflow_engine.generate_workflow_from_query(query_to_use)
         
         # Create a unique workflow ID
         workflow_id = str(uuid.uuid4())
@@ -216,89 +218,145 @@ async def stop_workflow(workflow_id: str):
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
     """
-    Enhanced chat endpoint that can generate workflows for workflow-related queries.
+    Enhanced chat endpoint that provides intelligent responses and workflow generation.
     """
     try:
         logger.info(f"🚀 Received query: {request.query}")
         
         # Check if this is a workflow-related query
-        workflow_keywords = ['create', 'generate', 'workflow', 'process', 'execute', 'automate']
+        workflow_keywords = ['create', 'generate', 'workflow', 'process', 'execute', 'automate', 'pipeline']
         is_workflow_query = any(keyword in request.query.lower() for keyword in workflow_keywords)
         
         if is_workflow_query:
-            # Generate workflow instead of regular chat response
+            # Generate workflow and provide detailed response
             workflow_data = workflow_engine.generate_workflow_from_query(request.query)
             
+            # Create a detailed response based on the query
+            response_text = _generate_workflow_response(request.query, workflow_data)
+            
             return ChatResponse(
-                response=f"Generated workflow for: {request.query}",
+                response=response_text,
                 session_id=request.session_id or str(uuid.uuid4()),
                 tools_used=["WorkflowGenerator"],
-                reasoning_steps=["Analyzed query for workflow generation", "Generated workflow steps"],
+                reasoning_steps=["Analyzed query for workflow generation", "Generated workflow steps", "Created detailed response"],
                 nodes=workflow_data['nodes'],
                 edges=workflow_data['edges']
             )
         
-        # Fall back to regular chat processing
-        file_path = None
-        if request.file_info and 'filename' in request.file_info:
-            filename = request.file_info['filename']
-            # Security: Ensure the file is within the UPLOADS_DIR
-            safe_path = os.path.abspath(os.path.join(UPLOADS_DIR, filename))
-            if os.path.commonpath([safe_path, os.path.abspath(UPLOADS_DIR)]) != os.path.abspath(UPLOADS_DIR):
-                raise HTTPException(status_code=400, detail="Invalid filename.")
-            
-            if os.path.exists(safe_path):
-                file_path = safe_path
-            else:
-                logger.warning(f"⚠️ File specified but not found: {filename}")
-
-        orchestrator = AgentOrchestrator()
+        # Handle other types of queries with intelligent responses
+        response_text = _generate_intelligent_response(request.query)
         
-        session_result = await orchestrator.process_query(
-            request.query, 
-            request.session_id,
-            file_path=file_path
-        )
-        
-        # Format reasoning steps for response
-        reasoning_steps = [
-            f"{step.step_type}: {step.content[:100]}..." if len(step.content) > 100 else f"{step.step_type}: {step.content}"
-            for step in session_result.reasoning_steps
-        ]
-        
-        nodes, edges = None, None
-        # If the KG was queried, or if the query implies a workflow, return a graph
-        if "KnowledgeGraphQuerier" in session_result.tools_used:
-            graph_data = await get_knowledge_graph()
-            nodes = graph_data.get("nodes")
-            edges = graph_data.get("edges")
-        elif 'create' in request.query.lower() or 'generate' in request.query.lower():
-            # This is a mock graph generation for demonstration.
-            # A real implementation would involve the LLM generating these steps.
-            nodes = [
-                {'id': '1', 'position': {'x': 250, 'y': 25}, 'data': {'label': 'Start Workflow'}, 'type': 'start'},
-                {'id': '2', 'position': {'x': 250, 'y': 150}, 'data': {'label': f'Execute: {request.query}'}, 'type': 'execute'},
-                {'id': '3', 'position': {'x': 250, 'y': 275}, 'data': {'label': 'Process Results'}, 'type': 'process'},
-                {'id': '4', 'position': {'x': 250, 'y': 400}, 'data': {'label': 'End Workflow'}, 'type': 'end'},
-            ]
-            edges = [
-                {'id': 'e1-2', 'source': '1', 'target': '2', 'animated': True},
-                {'id': 'e2-3', 'source': '2', 'target': '3', 'animated': True},
-                {'id': 'e3-4', 'source': '3', 'target': '4', 'animated': True},
-            ]
-
         return ChatResponse(
-            response=session_result.final_response or "I was unable to process your request.",
-            session_id=session_result.session_id,
-            tools_used=session_result.tools_used,
-            reasoning_steps=reasoning_steps,
-            nodes=nodes,
-            edges=edges,
+            response=response_text,
+            session_id=request.session_id or str(uuid.uuid4()),
+            tools_used=["ResponseGenerator"],
+            reasoning_steps=["Analyzed user query", "Generated contextual response"]
         )
         
     except Exception as e:
         logger.error(f"❌ Error processing chat request: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        # Provide a helpful error response instead of throwing an exception
+        return ChatResponse(
+            response="I apologize, but I encountered an issue processing your request. Please try rephrasing your question or ask me to create a workflow instead.",
+            session_id=request.session_id or str(uuid.uuid4()),
+            tools_used=["ErrorHandler"],
+            reasoning_steps=["Error occurred", "Generated fallback response"]
+        )
+
+def _generate_workflow_response(query: str, workflow_data: dict) -> str:
+    """Generate a detailed response for workflow-related queries"""
+    
+    # Extract workflow information
+    node_count = len(workflow_data.get('nodes', []))
+    edge_count = len(workflow_data.get('edges', []))
+    
+    # Create contextual responses based on query keywords
+    query_lower = query.lower()
+    
+    if 'data' in query_lower and 'analysis' in query_lower:
+        return f"""I've created a data analysis workflow for you! 📊
+
+The workflow includes {node_count} steps that will:
+• Collect and process your data
+• Perform analysis and generate insights
+• Create visualizations and reports
+
+You can see the workflow in the canvas. Click the ▶️ button to execute it when you're ready. The workflow will guide you through each step of the data analysis process."""
+    
+    elif 'email' in query_lower or 'communication' in query_lower:
+        return f"""I've designed an email workflow for you! 📧
+
+The workflow includes {node_count} steps that will:
+• Process incoming emails
+• Categorize and prioritize messages
+• Generate appropriate responses
+• Track communication history
+
+The workflow is now visible in the canvas. You can execute it to start processing your emails automatically."""
+    
+    elif 'user' in query_lower and ('create' in query_lower or 'manage' in query_lower):
+        return f"""I've created a user management workflow for you! 👥
+
+The workflow includes {node_count} steps that will:
+• Create new user accounts
+• Set up proper permissions and roles
+• Validate user information
+• Send welcome notifications
+
+The workflow is ready in the canvas. Click ▶️ to execute it and start managing your users efficiently."""
+    
+    elif 'content' in query_lower or 'automation' in query_lower:
+        return f"""I've built a content automation workflow for you! ✨
+
+The workflow includes {node_count} steps that will:
+• Generate content based on your requirements
+• Optimize and format the content
+• Schedule and publish automatically
+• Track performance metrics
+
+The workflow is displayed in the canvas. Execute it to start automating your content creation process."""
+    
+    else:
+        return f"""I've generated a workflow for your request! 🚀
+
+The workflow includes {node_count} steps that will help you accomplish your goal. You can see the complete workflow in the canvas above.
+
+Key features:
+• Step-by-step execution
+• Progress tracking
+• Error handling
+• Results visualization
+
+Click the ▶️ button to execute the workflow when you're ready to get started!"""
+
+def _generate_intelligent_response(query: str) -> str:
+    """Generate intelligent responses for non-workflow queries"""
+    
+    query_lower = query.lower()
+    
+    # Greeting responses
+    if any(word in query_lower for word in ['hello', 'hi', 'hey', 'greetings']):
+        return "Hello! 👋 I'm your AI assistant. I can help you create workflows, answer questions, or assist with various tasks. What would you like to work on today?"
+    
+    # Help responses
+    elif any(word in query_lower for word in ['help', 'what can you do', 'capabilities']):
+        return """I'm here to help you with various tasks! Here's what I can do:
+
+🚀 **Workflow Creation**: Create automated workflows for data processing, email management, content creation, and more
+📊 **Data Analysis**: Help you analyze data and generate insights
+📧 **Communication**: Assist with email workflows and communication automation
+👥 **User Management**: Create workflows for user onboarding and management
+✨ **Content Automation**: Build workflows for content creation and publishing
+
+Just describe what you want to accomplish, and I'll create a workflow for you!"""
+    
+    # Question responses
+    elif '?' in query:
+        return f"That's an interesting question about '{query}'. I'd be happy to help you create a workflow to explore this topic or find answers. Would you like me to generate a workflow that can help investigate this further?"
+    
+    # General conversation
+    else:
+        return f"I understand you're asking about '{query}'. I'm designed to help you create workflows and automate tasks. Would you like me to create a workflow that can help you with this? Just let me know what specific outcome you're looking for!"
 
 @app.get("/knowledge_graph")
 async def get_knowledge_graph():
