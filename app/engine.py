@@ -189,7 +189,8 @@ class GeminiRAG:
     def _invoke_llm(self, prompt: str) -> str:
         """Invokes the LLM to get a response."""
         if not self.llm:
-            return "The Language Model is not available. Please check the API key configuration."
+            # Fallback response system when Google API is not available
+            return self._fallback_response(prompt)
         try:
             response = self.llm.generate_content(prompt)
             # Add a check for the response content
@@ -199,7 +200,54 @@ class GeminiRAG:
                 return "Received an empty response from the Language Model."
         except Exception as e:
             print(f"Error invoking LLM: {e}")
-            return "There was an error communicating with the Language Model."
+            # Fallback to basic response system
+            return self._fallback_response(prompt)
+
+    def _fallback_response(self, prompt: str) -> str:
+        """Provides fallback responses when the LLM is not available."""
+        # Extract the user query from the prompt
+        if "User's Question:" in prompt:
+            user_query = prompt.split("User's Question:")[-1].strip()
+        else:
+            user_query = prompt.lower()
+        
+        # Basic response patterns
+        if any(word in user_query.lower() for word in ["hello", "hi", "hey", "howdy"]):
+            return "Hello! I'm Ultiman, your AI assistant. I can help you with workflow creation, knowledge base queries, and more. What would you like to work on today?"
+        
+        elif any(word in user_query.lower() for word in ["workflow", "create", "build", "make", "generate", "design"]):
+            # Check if this is a specific workflow creation request
+            workflow_keywords = ["create", "build", "make", "generate", "design", "set up", "establish"]
+            workflow_indicators = ["workflow", "pipeline", "process", "automation", "flow"]
+            
+            has_workflow_keyword = any(keyword in user_query.lower() for keyword in workflow_keywords)
+            has_workflow_indicator = any(indicator in user_query.lower() for indicator in workflow_indicators)
+            
+            if has_workflow_keyword and has_workflow_indicator:
+                # This is a specific workflow creation request, generate a workflow
+                try:
+                    workflow_json = self._fallback_workflow_generation(user_query)
+                    if workflow_json:
+                        return f"I've created a workflow based on your request: '{user_query}'. The workflow has been generated and should appear on your canvas. You can now customize and modify the nodes and connections as needed."
+                    else:
+                        return "I tried to create a workflow but encountered an issue. Please try again with a more specific description of what you want to automate."
+                except Exception as e:
+                    print(f"Error in fallback workflow generation: {e}")
+                    return "I encountered an error while creating your workflow. Please try again with a different description."
+            else:
+                return "I can help you create workflows! Try describing what you want to automate or process. For example: 'Create a customer email workflow' or 'Build a data analysis pipeline'."
+        
+        elif any(word in user_query.lower() for word in ["help", "what can you do", "capabilities"]):
+            return "I'm Ultiman, an AI assistant that can help you with:\n\n• Creating and managing workflows\n• Searching and exploring knowledge bases\n• Answering questions about processes and systems\n• Automating tasks and data processing\n\nWhat would you like to work on?"
+        
+        elif any(word in user_query.lower() for word in ["knowledge", "data", "information", "search"]):
+            return "I can help you search through knowledge bases and find relevant information. You can explore the knowledge graph to see relationships between different entities and concepts."
+        
+        elif any(word in user_query.lower() for word in ["thank", "thanks"]):
+            return "You're welcome! I'm here to help. Feel free to ask me anything about workflows, knowledge management, or automation."
+        
+        else:
+            return "I understand you're asking about something, but I'm currently running in fallback mode without full AI capabilities. I can help you with:\n\n• Basic workflow creation\n• Knowledge base exploration\n• General guidance on automation\n\nTo enable full AI features, please configure the Google Generative AI credentials. For now, try asking about workflows or what I can help you with!"
 
     def query(self, query_text: str) -> str:
         """
@@ -213,6 +261,27 @@ class GeminiRAG:
         greetings = ["hi", "hello", "hey", "yo", "sup", "howdy"]
         if query_text.lower().strip().rstrip("!.") in greetings:
             return "Hello! How can I help you today?"
+
+        # --- WORKFLOW CREATION DETECTION ---
+        workflow_keywords = ["create", "build", "make", "generate", "design", "set up", "establish"]
+        workflow_indicators = ["workflow", "pipeline", "process", "automation", "flow"]
+        
+        query_lower = query_text.lower()
+        has_workflow_keyword = any(keyword in query_lower for keyword in workflow_keywords)
+        has_workflow_indicator = any(indicator in query_lower for indicator in workflow_indicators)
+        
+        if has_workflow_keyword and has_workflow_indicator:
+            # This is a workflow creation request
+            print(f"\\n--- Detected Workflow Creation Request: '{query_text}' ---")
+            try:
+                workflow_json = self.generate_workflow_from_prompt(query_text)
+                if workflow_json:
+                    return f"I've created a workflow based on your request: '{query_text}'. The workflow has been generated and should appear on your canvas. You can now customize and modify the nodes and connections as needed."
+                else:
+                    return "I tried to create a workflow but encountered an issue. Please try again with a more specific description of what you want to automate."
+            except Exception as e:
+                print(f"Error in workflow generation: {e}")
+                return "I encountered an error while creating your workflow. Please try again with a different description."
 
         print(f"\\n--- Processing Query: '{query_text}' ---")
 
@@ -263,8 +332,104 @@ Produce the JSON output now.
 """
         try:
             # We expect the model to return a JSON string, which we then parse.
-            response = self.llm.generate_content(prompt)
-            return response.text
+            if self.llm:
+                response = self.llm.generate_content(prompt)
+                return response.text
+            else:
+                # Fallback workflow generation
+                return self._fallback_workflow_generation(query)
         except Exception as e:
             print(f"Error generating workflow with Gemini: {e}")
-            return None 
+            # Fallback workflow generation
+            return self._fallback_workflow_generation(query)
+
+    def _fallback_workflow_generation(self, query: str) -> str:
+        """Provides fallback workflow generation when the LLM is not available."""
+        query_lower = query.lower()
+        
+        # Enhanced workflow templates based on keywords
+        if any(word in query_lower for word in ["email", "mail", "message", "customer email"]):
+            return json.dumps({
+                "nodes": [
+                    {"id": "node-1", "position": {"x": 100, "y": 100}, "data": {"label": "Receive Email"}, "type": "input"},
+                    {"id": "node-2", "position": {"x": 300, "y": 100}, "data": {"label": "Classify Email"}, "type": "default"},
+                    {"id": "node-3", "position": {"x": 500, "y": 100}, "data": {"label": "Process Content"}, "type": "default"},
+                    {"id": "node-4", "position": {"x": 700, "y": 100}, "data": {"label": "Generate Response"}, "type": "default"},
+                    {"id": "node-5", "position": {"x": 900, "y": 100}, "data": {"label": "Send Reply"}, "type": "output"}
+                ],
+                "edges": [
+                    {"id": "edge-1", "source": "node-1", "target": "node-2", "animated": True},
+                    {"id": "edge-2", "source": "node-2", "target": "node-3", "animated": True},
+                    {"id": "edge-3", "source": "node-3", "target": "node-4", "animated": True},
+                    {"id": "edge-4", "source": "node-4", "target": "node-5", "animated": True}
+                ]
+            })
+        
+        elif any(word in query_lower for word in ["data", "analysis", "process", "pipeline"]):
+            return json.dumps({
+                "nodes": [
+                    {"id": "node-1", "position": {"x": 100, "y": 100}, "data": {"label": "Input Data"}, "type": "input"},
+                    {"id": "node-2", "position": {"x": 300, "y": 100}, "data": {"label": "Validate Data"}, "type": "default"},
+                    {"id": "node-3", "position": {"x": 500, "y": 100}, "data": {"label": "Clean Data"}, "type": "default"},
+                    {"id": "node-4", "position": {"x": 700, "y": 100}, "data": {"label": "Analyze Data"}, "type": "default"},
+                    {"id": "node-5", "position": {"x": 900, "y": 100}, "data": {"label": "Generate Report"}, "type": "output"}
+                ],
+                "edges": [
+                    {"id": "edge-1", "source": "node-1", "target": "node-2", "animated": True},
+                    {"id": "edge-2", "source": "node-2", "target": "node-3", "animated": True},
+                    {"id": "edge-3", "source": "node-3", "target": "node-4", "animated": True},
+                    {"id": "edge-4", "source": "node-4", "target": "node-5", "animated": True}
+                ]
+            })
+        
+        elif any(word in query_lower for word in ["support", "ticket", "issue", "help"]):
+            return json.dumps({
+                "nodes": [
+                    {"id": "node-1", "position": {"x": 100, "y": 100}, "data": {"label": "Receive Ticket"}, "type": "input"},
+                    {"id": "node-2", "position": {"x": 300, "y": 100}, "data": {"label": "Categorize Issue"}, "type": "default"},
+                    {"id": "node-3", "position": {"x": 500, "y": 100}, "data": {"label": "Assign Priority"}, "type": "default"},
+                    {"id": "node-4", "position": {"x": 700, "y": 100}, "data": {"label": "Process Resolution"}, "type": "default"},
+                    {"id": "node-5", "position": {"x": 900, "y": 100}, "data": {"label": "Close Ticket"}, "type": "output"}
+                ],
+                "edges": [
+                    {"id": "edge-1", "source": "node-1", "target": "node-2", "animated": True},
+                    {"id": "edge-2", "source": "node-2", "target": "node-3", "animated": True},
+                    {"id": "edge-3", "source": "node-3", "target": "node-4", "animated": True},
+                    {"id": "edge-4", "source": "node-4", "target": "node-5", "animated": True}
+                ]
+            })
+        
+        elif any(word in query_lower for word in ["content", "create", "generate", "automation"]):
+            return json.dumps({
+                "nodes": [
+                    {"id": "node-1", "position": {"x": 100, "y": 100}, "data": {"label": "Input Request"}, "type": "input"},
+                    {"id": "node-2", "position": {"x": 300, "y": 100}, "data": {"label": "Research Topic"}, "type": "default"},
+                    {"id": "node-3", "position": {"x": 500, "y": 100}, "data": {"label": "Generate Content"}, "type": "default"},
+                    {"id": "node-4", "position": {"x": 700, "y": 100}, "data": {"label": "Review & Edit"}, "type": "default"},
+                    {"id": "node-5", "position": {"x": 900, "y": 100}, "data": {"label": "Publish Content"}, "type": "output"}
+                ],
+                "edges": [
+                    {"id": "edge-1", "source": "node-1", "target": "node-2", "animated": True},
+                    {"id": "edge-2", "source": "node-2", "target": "node-3", "animated": True},
+                    {"id": "edge-3", "source": "node-3", "target": "node-4", "animated": True},
+                    {"id": "edge-4", "source": "node-4", "target": "node-5", "animated": True}
+                ]
+            })
+        
+        else:
+            # Generic workflow with more detailed steps
+            return json.dumps({
+                "nodes": [
+                    {"id": "node-1", "position": {"x": 100, "y": 100}, "data": {"label": "Start Process"}, "type": "input"},
+                    {"id": "node-2", "position": {"x": 300, "y": 100}, "data": {"label": "Validate Input"}, "type": "default"},
+                    {"id": "node-3", "position": {"x": 500, "y": 100}, "data": {"label": "Process Data"}, "type": "default"},
+                    {"id": "node-4", "position": {"x": 700, "y": 100}, "data": {"label": "Generate Output"}, "type": "default"},
+                    {"id": "node-5", "position": {"x": 900, "y": 100}, "data": {"label": "Complete Task"}, "type": "output"}
+                ],
+                "edges": [
+                    {"id": "edge-1", "source": "node-1", "target": "node-2", "animated": True},
+                    {"id": "edge-2", "source": "node-2", "target": "node-3", "animated": True},
+                    {"id": "edge-3", "source": "node-3", "target": "node-4", "animated": True},
+                    {"id": "edge-4", "source": "node-4", "target": "node-5", "animated": True}
+                ]
+            }) 

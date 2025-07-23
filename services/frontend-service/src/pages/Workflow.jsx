@@ -18,7 +18,12 @@ import EmptyWorkflow from '../components/EmptyWorkflow';
 import ContextMenu from '../components/ContextMenu';
 import NodeTemplates from '../components/NodeTemplates';
 import FloatingToolbar from '../components/FloatingToolbar';
-import { WORKFLOW_GENERATE_ENDPOINT } from '../config';
+import EnhancedNode from '../components/EnhancedNode';
+import MonitoringDashboard from '../components/MonitoringDashboard';
+import WorkflowTemplates from '../components/WorkflowTemplates';
+import DataIntegrationHub from '../components/DataIntegrationHub';
+import SystemVisualizer3D from '../components/SystemVisualizer3D';
+import { WORKFLOW_GENERATE_ENDPOINT, API_BASE_URL } from '../config';
 import { 
   FiMaximize, 
   FiMinimize, 
@@ -30,12 +35,12 @@ import {
   FiMoreHorizontal,
   FiSave,
   FiRotateCcw,
-  FiZap
+  FiZap,
+  FiActivity,
+  FiDatabase,
+  FiEye,
+  FiEyeOff
 } from 'react-icons/fi';
-
-const nodeTypes = {
-  default: FallbackNode,
-};
 
 // Temporary fallback node type for debugging
 const FallbackNode = ({ data }) => {
@@ -53,6 +58,11 @@ const FallbackNode = ({ data }) => {
       <div>Status: {data?.status || 'unknown'}</div>
     </div>
   );
+};
+
+const nodeTypes = {
+  default: FallbackNode,
+  enhanced: EnhancedNode,
 };
 
 const Workflow = () => {
@@ -78,6 +88,10 @@ const Workflow = () => {
   const [workflowName, setWorkflowName] = useState('Untitled Workflow');
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionStep, setExecutionStep] = useState(0);
+  const [showMonitoring, setShowMonitoring] = useState(false);
+  const [showWorkflowTemplates, setShowWorkflowTemplates] = useState(false);
+  const [showDataHub, setShowDataHub] = useState(false);
+  const [showSystemVisualizer, setShowSystemVisualizer] = useState(false);
   const [contextMenu, setContextMenu] = useState({
     visible: false,
     x: 0,
@@ -469,25 +483,66 @@ const Workflow = () => {
 
   // Chat message handler
   const handleSendMessage = async (payload) => {
-    const newMessage = {
-      id: Date.now(),
-      type: 'user',
-      content: payload,
-      timestamp: new Date().toISOString()
-    };
+    try {
+      console.log('Sending message to backend:', payload);
+      
+      const response = await fetch(`${API_BASE_URL}/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: payload.query || payload
+        }),
+      });
 
-    setMessages(prev => [...prev, newMessage]);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse = {
-        id: Date.now() + 1,
-        type: 'assistant',
-        content: `I understand you want to work with workflows. I can help you create, modify, and execute workflows. What would you like to do?`,
-        timestamp: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, aiResponse]);
-    }, 1000);
+      const data = await response.json();
+      console.log('Backend response:', data);
+      
+      // Check if this is a workflow creation response
+      if (data.response && data.response.includes('workflow has been generated')) {
+        console.log('Workflow creation detected, generating workflow...');
+        
+        // Call the workflow generation endpoint
+        const workflowResponse = await fetch(`${API_BASE_URL}/workflow/generate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt: payload.query || payload
+          }),
+        });
+
+        if (workflowResponse.ok) {
+          const workflowData = await workflowResponse.json();
+          console.log('Workflow generated:', workflowData);
+          
+          // Update the workflow with the generated nodes and edges
+          if (workflowData.nodes && workflowData.edges) {
+            setNodes(workflowData.nodes);
+            setEdges(workflowData.edges);
+            console.log('Workflow updated with generated nodes and edges');
+          }
+          
+          // Return the original response but with workflow data
+          return {
+            ...data,
+            workflowGenerated: true,
+            workflowData: workflowData
+          };
+        }
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error calling backend API:', error);
+      throw error;
+    }
   };
 
   // Node data change handler
@@ -648,8 +703,20 @@ const Workflow = () => {
             >
               <FiPlay />
             </button>
-            <button onClick={() => setShowTemplates(true)} title="Templates (Ctrl+T)">
+            <button onClick={() => setShowTemplates(true)} title="Node Templates (Ctrl+T)">
               <FiGrid />
+            </button>
+            <button onClick={() => setShowWorkflowTemplates(true)} title="Workflow Templates">
+              <FiZap />
+            </button>
+            <button onClick={() => setShowDataHub(true)} title="Data Integration Hub">
+              <FiDatabase />
+            </button>
+            <button onClick={() => setShowMonitoring(!showMonitoring)} title="System Monitor">
+              {showMonitoring ? <FiEyeOff /> : <FiEye />}
+            </button>
+            <button onClick={() => setShowSystemVisualizer(true)} title="3D System Visualizer">
+              <FiActivity />
             </button>
             <button onClick={autoLayout} title="Auto Layout (Shift+L)">
               <FiSettings />
@@ -817,6 +884,35 @@ const Workflow = () => {
         nodeData={contextMenu.nodeData}
         onClose={closeContextMenu}
         onAction={handleContextAction}
+      />
+
+      {/* Monitoring Dashboard */}
+      <MonitoringDashboard 
+        isVisible={showMonitoring}
+        onToggle={() => setShowMonitoring(!showMonitoring)}
+      />
+
+      {/* Workflow Templates */}
+      <WorkflowTemplates
+        isVisible={showWorkflowTemplates}
+        onClose={() => setShowWorkflowTemplates(false)}
+        onApplyTemplate={(templateData) => {
+          setNodes(templateData.nodes);
+          setEdges(templateData.edges);
+          setShowWorkflowTemplates(false);
+        }}
+      />
+
+      {/* Data Integration Hub */}
+      <DataIntegrationHub
+        isVisible={showDataHub}
+        onClose={() => setShowDataHub(false)}
+      />
+
+      {/* 3D System Visualizer */}
+      <SystemVisualizer3D
+        isVisible={showSystemVisualizer}
+        onClose={() => setShowSystemVisualizer(false)}
       />
     </div>
   );
